@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const { testConnection: testMySQLConnection } = require('./config/database');
 const { testConnection: testSQLiteConnection, initDatabase } = require('./config/sqlite-database');
+const { setupAttendanceManagement } = require('./database/setup-attendance-management');
 const { scheduleDailyReset, performDailyReset } = require('./scripts/daily-attendance-reset');
 
 // Import routes
@@ -60,6 +61,7 @@ app.listen(PORT, async () => {
     console.log('MySQL not available, switching to SQLite...');
     try {
       await initDatabase();
+      await setupAttendanceManagement(); // Setup attendance management tables
       await testSQLiteConnection();
       console.log('Using SQLite database');
       process.env.DB_TYPE = 'sqlite';
