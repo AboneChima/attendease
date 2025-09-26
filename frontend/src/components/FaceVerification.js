@@ -4,102 +4,64 @@ import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 const FaceVerification = ({ onVerificationSuccess, onError }) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [verificationResult, setVerificationResult] = useState(null);
   const [countdown, setCountdown] = useState(0);
-  
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   const videoRef = useRef();
   const canvasRef = useRef();
   const intervalRef = useRef();
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    loadModels();
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      stopCamera();
-      const currentInterval = intervalRef.current;
-      if (currentInterval) {
-        clearInterval(currentInterval);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const loadModels = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log('Loading face verification models...');
-      // Use CDN URLs for reliable model loading
-      const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+      console.log('Loading face-api models...');
+      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+      await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
+      await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
       
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-      ]);
-      
-      console.log('Face verification models loaded successfully');
+      console.log('Face-api models loaded successfully');
       setModelsLoaded(true);
       setIsLoading(false);
     } catch (error) {
       console.error('Error loading face-api models:', error);
-      onError('Failed to load face recognition models');
       setIsLoading(false);
     }
-  }, [onError]);
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
-      console.log('Starting camera for face verification...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 }
+      console.log('Starting camera...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: 640, 
+          height: 480,
+          facingMode: 'user'
+        } 
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         setCameraActive(true);
-        console.log('Camera started successfully for verification');
-        
-        // Ensure video is ready for detection
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded for verification');
-        };
+        console.log('Camera started successfully');
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
-      onError('Failed to access camera. Please ensure camera permissions are granted.');
-    }
-  }, [onError]);
-
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setCameraActive(false);
     }
   }, []);
 
-  const startVerification = useCallback(() => {
-    setCountdown(3);
-    setVerificationResult(null);
-    
-    const countdownInterval = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          // eslint-disable-next-line react-hooks/exhaustive-deps
-          performVerification();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stopCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+      setCameraActive(false);
+      console.log('Camera stopped');
+    }
   }, []);
 
   const performVerification = useCallback(async () => {
@@ -200,6 +162,35 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
     
     setIsVerifying(false);
   }, [modelsLoaded, onVerificationSuccess]);
+
+  useEffect(() => {
+    loadModels();
+    return () => {
+      stopCamera();
+      // Store the current interval value to avoid stale closure
+      const currentInterval = intervalRef.current;
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        intervalRef.current = null;
+      }
+    };
+  }, [loadModels, stopCamera]);
+
+  const startVerification = useCallback(() => {
+    setCountdown(3);
+    setVerificationResult(null);
+    
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          performVerification();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [performVerification]);
 
   const resetVerification = useCallback(() => {
     setVerificationResult(null);
