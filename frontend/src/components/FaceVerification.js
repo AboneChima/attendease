@@ -16,13 +16,17 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
   const intervalRef = useRef();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     loadModels();
     return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       stopCamera();
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+      const currentInterval = intervalRef.current;
+      if (currentInterval) {
+        clearInterval(currentInterval);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadModels = useCallback(async () => {
@@ -88,12 +92,14 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
       setCountdown(prev => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
+          // eslint-disable-next-line react-hooks/exhaustive-deps
           performVerification();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const performVerification = useCallback(async () => {

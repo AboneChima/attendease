@@ -13,7 +13,6 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
   const [faceDetected, setFaceDetected] = useState(false);
   const [facePosition, setFacePosition] = useState({ distance: 'unknown', centered: false });
   const [currentAction, setCurrentAction] = useState(null); // 'blink', 'smile', 'neutral', 'turn_left', 'turn_right'
-  const [actionCompleted, setActionCompleted] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [captureStatus, setCaptureStatus] = useState(''); // 'ready', 'capturing', 'captured'
 
@@ -23,7 +22,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
 
   useEffect(() => {
     loadModels();
-  }, [loadModels]);
+  }, []);
 
   const loadModels = useCallback(async () => {
     try {
@@ -90,7 +89,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       console.error('Camera error:', error);
       onError('Failed to access camera');
     }
-  }, [onError]);
+  }, [onError, startFaceDetection]);
 
   const startFaceDetection = useCallback(() => {
     const detectFace = async () => {
@@ -141,7 +140,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     };
     
     detectFace();
-  }, [currentStep]);
+  }, [currentStep, analyzeFacePosition, handlePositioning, handleCapture]);
 
   const analyzeFacePosition = useCallback((detection) => {
     const box = detection.detection.box;
@@ -225,7 +224,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         startCaptureSequence();
       }, 1000);
     }
-  }, [currentStep]);
+  }, [currentStep, startCaptureSequence]);
 
   const startCaptureSequence = useCallback(() => {
     console.log('🚀 Start Capture Sequence initiated!');
@@ -233,9 +232,8 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     
     console.log('✅ Starting face enrollment process...');
     setCurrentAction(FACE_ACTIONS[0]);
-    setActionCompleted(false);
     setCountdown(3);
-    
+
     console.log('⏰ Starting 3-second countdown...');
     const countdownInterval = setInterval(() => {
       setCountdown(prev => {
@@ -243,13 +241,14 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         if (prev <= 1) {
           clearInterval(countdownInterval);
           console.log('⏰ Countdown finished! Starting first action...');
+          // eslint-disable-next-line no-use-before-define
           executeCurrentAction();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [studentId]);
+  }, [studentId, FACE_ACTIONS]);
 
   const executeCurrentAction = useCallback(() => {
     console.log(`🎬 Executing action ${capturedSamples.length + 1}/${REQUIRED_SAMPLES}`);
@@ -274,6 +273,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       case 'turn_right':
         setInstruction('Turn your head slightly to the right');
         break;
+      default:
+        setInstruction('Follow the instructions on screen');
+        break;
     }
     
     console.log(`📋 Setting instruction: ${action}`);
@@ -288,9 +290,10 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     // Auto-capture after 2 seconds
     setTimeout(() => {
       console.log('📸 Attempting to capture frame now');
+      // eslint-disable-next-line no-use-before-define
       captureCurrentFrame();
     }, 2000);
-  }, [capturedSamples.length]);
+  }, [capturedSamples.length, FACE_ACTIONS]);
 
   const handleCapture = useCallback(async (detection) => {
     // This function is called continuously during capture phase
@@ -370,6 +373,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
           }, 1000);
         } else {
           console.log('🏁 All samples collected! Starting enrollment completion...');
+          // eslint-disable-next-line no-use-before-define
           completeFaceEnrollment(newSamples);
         }
       } else {
@@ -389,7 +393,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         executeCurrentAction();
       }, 1000);
     }
-  }, [capturedSamples, executeCurrentAction]);
+  }, [capturedSamples, executeCurrentAction, completeFaceEnrollment]);
 
   const completeFaceEnrollment = useCallback(async (samples) => {
     try {
