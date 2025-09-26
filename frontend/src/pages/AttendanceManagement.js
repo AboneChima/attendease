@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Calendar, Users, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, BarChart3, History } from 'lucide-react';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API_BASE_URL from '../config/api';
 
 const AttendanceManagement = () => {
   const [attendanceData, setAttendanceData] = useState([]);

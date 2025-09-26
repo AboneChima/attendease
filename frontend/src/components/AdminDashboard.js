@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import API_BASE_URL from '../config/api';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -31,7 +32,7 @@ const AdminDashboard = () => {
         if (value) queryParams.append(key, value);
       });
       
-      const response = await fetch(`http://localhost:5000/api/attendance-management/audit-logs?${queryParams}`, {
+      const response = await fetch(`${API_BASE_URL}/attendance-management/audit-logs?${queryParams}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

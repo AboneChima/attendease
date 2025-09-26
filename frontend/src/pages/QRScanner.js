@@ -4,8 +4,7 @@ import axios from 'axios';
 import FaceVerification from '../components/FaceVerification';
 import BiometricAttendance from '../components/BiometricAttendance';
 import PinFallback from '../components/PinFallback';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API_BASE_URL from '../config/api';
 
 const QRScanner = () => {
   const [scanning, setScanning] = useState(false);

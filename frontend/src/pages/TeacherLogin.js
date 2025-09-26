@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { LogIn, GraduationCap, Shield, Loader2 } from 'lucide-react';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API_BASE_URL from '../config/api';
 
 const TeacherLogin = () => {
   const [formData, setFormData] = useState({

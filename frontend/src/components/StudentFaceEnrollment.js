@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import EnhancedFaceEnrollment from './EnhancedFaceEnrollment';
-
-const API_BASE_URL = 'http://localhost:5000/api';
+import API_BASE_URL from '../config/api';
 
 const StudentFaceEnrollment = () => {
   const [step, setStep] = useState('verification'); // 'verification' or 'enrollment'

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_BASE_URL from '../config/api';
 import FingerprintScanner from './FingerprintScanner';
 
 const FingerprintEnrollment = ({ studentId, onEnrollmentComplete, onCancel }) => {
@@ -57,7 +58,7 @@ const FingerprintEnrollment = ({ studentId, onEnrollmentComplete, onCancel }) =>
       const credentialIdBase64 = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
       
       // Store a simple fingerprint enrollment record
-      const response = await fetch('http://localhost:5000/api/students/enroll-fingerprint', {
+      const response = await fetch(`${API_BASE_URL}/students/enroll-fingerprint`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
