@@ -46,50 +46,212 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     }
   }, [onError]);
 
-  const startCamera = useCallback(async () => {
+  const analyzeFacePosition = useCallback((detection) => {
+    const box = detection.detection.box;
+    const videoWidth = videoRef.current.videoWidth;
+    const videoHeight = videoRef.current.videoHeight;
+    
+    const centerX = box.x + box.width / 2;
+    const centerY = box.y + box.height / 2;
+    const videoCenterX = videoWidth / 2;
+    const videoCenterY = videoHeight / 2;
+    
+    const offsetX = Math.abs(centerX - videoCenterX);
+    const offsetY = Math.abs(centerY - videoCenterY);
+    
+    const isWellCentered = offsetX < 50 && offsetY < 50;
+    
+    // Estimate distance based on face size
+    const faceArea = box.width * box.height;
+    const videoArea = videoWidth * videoHeight;
+    const faceRatio = faceArea / videoArea;
+    
+    const isGoodDistance = faceRatio > 0.05 && faceRatio < 0.25;
+    
+    setFacePosition({
+      centered: isWellCentered,
+      distance: isGoodDistance ? 'good' : (faceRatio < 0.05 ? 'far' : 'close'),
+      quality: isWellCentered && isGoodDistance ? 'good' : 'poor'
+    });
+    
+    return { isWellCentered, isGoodDistance };
+  }, []);
+
+  const handleCapture = useCallback(async (detection) => {
+    console.log('🎯 handleCapture called');
+  }, []);
+
+  const completeFaceEnrollment = useCallback(async (samples) => {
     try {
-      console.log('📹 Starting camera initialization...');
-      setInstruction('Starting camera...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: 640, 
-          height: 480,
-          facingMode: 'user'
-        } 
+      console.log('🚀 Starting face enrollment process...');
+      setCurrentStep('processing');
+      setInstruction('Processing your face data...');
+      
+      if (!samples || samples.length === 0) {
+        throw new Error('No face samples provided');
+      }
+      
+      console.log(`📊 Processing ${samples.length} face samples`);
+      
+      // Calculate average descriptor
+      const descriptorLength = samples[0].length;
+      const avgDescriptor = new Array(descriptorLength).fill(0);
+      
+      samples.forEach(sample => {
+        sample.forEach((value, index) => {
+          avgDescriptor[index] += value;
+        });
       });
       
-      console.log('✅ Camera stream obtained successfully');
+      avgDescriptor.forEach((value, index) => {
+        avgDescriptor[index] = value / samples.length;
+      });
       
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      console.log('✅ Face descriptor calculated successfully');
+      
+      // Call onComplete with the enrollment data
+      const enrollmentData = {
+        faceDescriptor: avgDescriptor,
+        samples: samples,
+        timestamp: new Date().toISOString(),
+        quality: 'high'
+      };
+      
+      console.log('🎉 Face enrollment completed successfully!');
+      setCurrentStep('complete');
+      setInstruction('Face enrollment completed successfully!');
+      
+      // Call the completion callback
+      if (onFaceEnrolled) {
+        onFaceEnrolled(enrollmentData);
+      }
+      
+    } catch (error) {
+      console.error('❌ Face enrollment failed:', error);
+      onError('Face enrollment failed: ' + error.message);
+    }
+  }, [onFaceEnrolled, onError]);
+
+  const captureCurrentFrame = useCallback(async () => {
+    try {
+      console.log('🔍 Starting face detection for capture...');
+      const detections = await faceapi
+        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      console.log(`👥 Detected ${detections.length} face(s)`);
+      if (detections.length === 1) {
+        const detection = detections[0];
+        const descriptor = detection.descriptor;
         
-        // Multiple event listeners to ensure transition happens
-        const transitionToPosition = () => {
-          console.log('📹 Video ready, transitioning to position step');
-          console.log('✅ Camera is now ready for face detection');
-          setIsLoading(false);
-          setCurrentStep('position');
-          setInstruction('Position your face in the center of the frame');
-          startFaceDetection();
-        };
+        console.log(`📊 Face descriptor length: ${descriptor.length}`);
+        console.log(`🎯 Current action: ${currentAction}`);
+        console.log(`📸 Captured samples so far: ${capturedSamples.length}/${REQUIRED_SAMPLES}`);
         
-        videoRef.current.onloadedmetadata = transitionToPosition;
-        videoRef.current.oncanplay = transitionToPosition;
+        // Add to captured samples
+        const newSamples = [...capturedSamples, Array.from(descriptor)];
+        setCapturedSamples(newSamples);
         
-        // Force transition after 2 seconds regardless
+        console.log(`✅ Sample ${newSamples.length} captured successfully!`);
+        
+        if (newSamples.length >= REQUIRED_SAMPLES) {
+          console.log('🎉 All samples collected! Starting enrollment process...');
+          completeFaceEnrollment(newSamples);
+        } else {
+          console.log(`🔄 Need ${REQUIRED_SAMPLES - newSamples.length} more samples`);
+          setTimeout(() => {
+            console.log('🎬 Moving to next action');
+            executeCurrentAction();
+          }, 1000);
+        }
+      } else {
+        console.log('❌ Face detection failed during capture');
+        setInstruction('Face not detected clearly. Please position yourself properly and try again.');
         setTimeout(() => {
-          console.log('Forcing transition to position step after timeout');
-          setIsLoading(false);
-          setCurrentStep('position');
-          setInstruction('Position your face in the center of the frame');
-          startFaceDetection();
-        }, 2000);
+          console.log('🔄 Retrying current action after detection failure');
+          executeCurrentAction();
+        }, 1000);
       }
     } catch (error) {
-      console.error('Camera error:', error);
-      onError('Failed to access camera');
+      console.error('❌ Capture error:', error);
+      console.error('❌ Error details:', error.message);
+      setInstruction('Error capturing face. Please try again.');
+      setTimeout(() => {
+        console.log('🔄 Retrying current action after capture error');
+        executeCurrentAction();
+      }, 1000);
     }
-  }, [onError]);
+  }, [capturedSamples, executeCurrentAction, completeFaceEnrollment, currentAction]);
+
+  const executeCurrentAction = useCallback(() => {
+    console.log('🎬 executeCurrentAction called with:', currentAction);
+    if (currentAction && currentAction.type === 'capture') {
+      console.log('📸 Executing capture action');
+      captureCurrentFrame();
+    } else {
+      console.log('⚠️ No valid action to execute:', currentAction);
+    }
+  }, [currentAction, captureCurrentFrame]);
+
+  const startCaptureSequence = useCallback(() => {
+    console.log('🎬 Starting capture sequence...');
+    setCurrentStep('capture');
+    setInstruction('Hold still while we capture your face...');
+    
+    const actions = [
+      { type: 'capture', instruction: 'Look straight ahead' },
+      { type: 'capture', instruction: 'Slight smile' },
+      { type: 'capture', instruction: 'Look slightly left' },
+      { type: 'capture', instruction: 'Look slightly right' },
+      { type: 'capture', instruction: 'Final capture' }
+    ];
+    
+    let currentIndex = 0;
+    
+    const processNextAction = () => {
+      if (currentIndex < actions.length && capturedSamples.length < REQUIRED_SAMPLES) {
+        const action = actions[currentIndex];
+        console.log(`🎯 Setting action ${currentIndex + 1}:`, action);
+        setCurrentAction(action);
+        setInstruction(action.instruction);
+        currentIndex++;
+        
+        setTimeout(() => {
+          console.log('⏰ Timeout reached, executing current action');
+          executeCurrentAction();
+        }, 2000);
+      }
+    };
+    
+    processNextAction();
+  }, [capturedSamples.length, executeCurrentAction]);
+
+  const handlePositioning = useCallback((detection) => {
+    const position = analyzeFacePosition(detection);
+    
+    if (position.isWellCentered && position.isGoodDistance) {
+      console.log('✅ Face is well positioned, starting capture sequence');
+      setInstruction('Perfect! Starting capture sequence...');
+      setTimeout(() => {
+        startCaptureSequence();
+      }, 1000);
+    } else {
+      let message = 'Please adjust your position: ';
+      if (!position.isWellCentered) {
+        message += 'Center your face in the frame. ';
+      }
+      if (!position.isGoodDistance) {
+        const distance = facePosition.distance;
+        if (distance === 'far') {
+          message += 'Move closer to the camera.';
+        } else if (distance === 'close') {
+          message += 'Move away from the camera.';
+        }
+      }
+      setInstruction(message);
+    }
+  }, [analyzeFacePosition, facePosition.distance, startCaptureSequence]);
 
   const startFaceDetection = useCallback(() => {
     const detectFace = async () => {
@@ -140,535 +302,111 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     };
     
     detectFace();
-  }, [currentStep]);
+  }, [currentStep, analyzeFacePosition, handlePositioning, handleCapture]);
 
-  const analyzeFacePosition = useCallback((detection) => {
-    const box = detection.detection.box;
-    const videoWidth = videoRef.current.videoWidth;
-    const videoHeight = videoRef.current.videoHeight;
-    
-    // Check if face is centered
-    const centerX = box.x + box.width / 2;
-    const centerY = box.y + box.height / 2;
-    const videoCenterX = videoWidth / 2;
-    const videoCenterY = videoHeight / 2;
-    
-    const horizontalOffset = Math.abs(centerX - videoCenterX);
-    const verticalOffset = Math.abs(centerY - videoCenterY);
-    
-    const centered = horizontalOffset < videoWidth * 0.15 && verticalOffset < videoHeight * 0.15;
-    
-    // Estimate distance based on face size
-    const faceArea = box.width * box.height;
-    const optimalArea = videoWidth * videoHeight * 0.10; // Face should be ~10% of frame
-    
-    let distance = 'good';
-    if (faceArea < optimalArea * 0.5) {
-      distance = 'too_far';
-    } else if (faceArea > optimalArea * 2.0) {
-      distance = 'too_close';
-    }
-    
-    console.log('Face analysis:', {
-      faceArea,
-      optimalArea,
-      centered,
-      distance,
-      horizontalOffset,
-      verticalOffset,
-      videoWidth,
-      videoHeight
-    });
-    
-    setFacePosition({ distance, centered });
-  }, []);
-
-  const handlePositioning = useCallback((detection) => {
-    // Get fresh position data directly from analysis instead of state
-    const box = detection.detection.box;
-    const videoWidth = videoRef.current.videoWidth;
-    const videoHeight = videoRef.current.videoHeight;
-    
-    const centerX = box.x + box.width / 2;
-    const centerY = box.y + box.height / 2;
-    const videoCenterX = videoWidth / 2;
-    const videoCenterY = videoHeight / 2;
-    
-    const horizontalOffset = Math.abs(centerX - videoCenterX);
-    const verticalOffset = Math.abs(centerY - videoCenterY);
-    const centered = horizontalOffset < videoWidth * 0.15 && verticalOffset < videoHeight * 0.15;
-    
-    const faceArea = box.width * box.height;
-    const optimalArea = videoWidth * videoHeight * 0.10;
-    let distance = 'good';
-    if (faceArea < optimalArea * 0.5) {
-      distance = 'too_far';
-    } else if (faceArea > optimalArea * 2.0) {
-      distance = 'too_close';
-    }
-    
-    console.log('Real-time positioning check:', { distance, centered, currentStep, faceArea, optimalArea });
-    
-    if (!centered) {
-      setInstruction('Please center your face in the frame');
-    } else if (distance === 'too_far') {
-      setInstruction('Move closer to the camera');
-    } else if (distance === 'too_close') {
-      setInstruction('Move back from the camera');
-    } else {
-      console.log('Perfect positioning detected! Starting capture sequence...');
-      setInstruction('Perfect! Hold still while we prepare...');
-      setTimeout(() => {
-        console.log('Transitioning to capture step');
-        setCurrentStep('capture');
-        startCaptureSequence();
-      }, 1000);
-    }
-  }, [currentStep]);
-
-  const startCaptureSequence = useCallback(() => {
-    console.log('🚀 Start Capture Sequence initiated!');
-    console.log(`👤 Student ID: ${studentId}`);
-    
-    console.log('✅ Starting face enrollment process...');
-    setCurrentAction(FACE_ACTIONS[0]);
-    setCountdown(3);
-
-    console.log('⏰ Starting 3-second countdown...');
-    const countdownInterval = setInterval(() => {
-      setCountdown(prev => {
-        console.log(`⏰ Countdown: ${prev}`);
-        if (prev <= 1) {
-          clearInterval(countdownInterval);
-          console.log('⏰ Countdown finished! Starting first action...');
-          executeCurrentAction();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, [studentId, FACE_ACTIONS]);
-
-  const executeCurrentAction = useCallback(() => {
-    console.log(`🎬 Executing action ${capturedSamples.length + 1}/${REQUIRED_SAMPLES}`);
-    const action = FACE_ACTIONS[capturedSamples.length];
-    console.log(`📋 Current action: ${action}`);
-    setCurrentAction(action);
-    setCaptureStatus('ready');
-    
-    switch (action) {
-      case 'neutral':
-        setInstruction('Look straight at the camera with a neutral expression');
-        break;
-      case 'smile':
-        setInstruction('Please smile naturally');
-        break;
-      case 'blink':
-        setInstruction('Blink your eyes slowly');
-        break;
-      case 'turn_left':
-        setInstruction('Turn your head slightly to the left');
-        break;
-      case 'turn_right':
-        setInstruction('Turn your head slightly to the right');
-        break;
-      default:
-        setInstruction('Follow the instructions on screen');
-        break;
-    }
-    
-    console.log(`📋 Setting instruction: ${action}`);
-    
-    // Show "Get ready" message
-    setTimeout(() => {
-      console.log('⏱️ Showing get ready message');
-      setInstruction('📸 Get ready... Capturing in 1 second!');
-      setCaptureStatus('capturing');
-    }, 1500);
-    
-    // Auto-capture after 2 seconds
-    setTimeout(() => {
-      console.log('📸 Attempting to capture frame now');
-      captureCurrentFrame();
-    }, 2000);
-  }, [capturedSamples.length, FACE_ACTIONS]);
-
-  const handleCapture = useCallback(async (detection) => {
-    // This function is called continuously during capture phase
-    // The actual capture is triggered by executeCurrentAction
-  }, []);
-
-  const captureCurrentFrame = useCallback(async () => {
+  const startCamera = useCallback(async () => {
     try {
-      console.log('🔍 Starting face detection for capture...');
-      const detections = await faceapi
-        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.3 }))
-        .withFaceLandmarks()
-        .withFaceDescriptors();
-
-      console.log(`👥 Detected ${detections.length} face(s)`);
-      if (detections.length === 1) {
-        console.log('✅ Single face detected, extracting descriptor...');
-        const faceDescriptor = Array.from(detections[0].descriptor);
-        console.log(`📊 Face descriptor length: ${faceDescriptor.length}`);
-        const newSamples = [...capturedSamples, faceDescriptor];
-        console.log(`💾 Updating samples: ${newSamples.length}/${REQUIRED_SAMPLES}`);
-        setCapturedSamples(newSamples);
+      console.log('📹 Starting camera initialization...');
+      setInstruction('Starting camera...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: 640, 
+          height: 480,
+          facingMode: 'user'
+        } 
+      });
+      
+      console.log('✅ Camera stream obtained successfully');
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
         
-        // Set capture status and provide feedback
-        setCaptureStatus('captured');
-        console.log(`✅ Sample ${newSamples.length}/${REQUIRED_SAMPLES} captured successfully!`);
-        console.log(`📊 Total samples collected: ${newSamples.length}`);
-        console.log(`🎯 Progress: ${Math.round((newSamples.length / REQUIRED_SAMPLES) * 100)}%`);
+        // Multiple event listeners to ensure transition happens
+        const transitionToPosition = () => {
+          console.log('📹 Video ready, transitioning to position step');
+          console.log('✅ Camera is now ready for face detection');
+          setIsLoading(false);
+          setCurrentStep('position');
+          setInstruction('Position your face in the center of the frame');
+          startFaceDetection();
+        };
         
-        // Flash effect for capture feedback
-        if (canvasRef.current) {
-          const canvas = canvasRef.current;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          setTimeout(() => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-          }, 200);
-        }
+        videoRef.current.onloadedmetadata = transitionToPosition;
+        videoRef.current.oncanplay = transitionToPosition;
         
-        // Audio feedback (optional - browser will handle permission)
-        try {
-          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const oscillator = audioContext.createOscillator();
-          const gainNode = audioContext.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(audioContext.destination);
-          oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-          gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-          oscillator.start();
-          oscillator.stop(audioContext.currentTime + 0.1);
-        } catch (e) {
-          // Audio not available, continue silently
-        }
-        
-        const newProgress = (newSamples.length / REQUIRED_SAMPLES) * 100;
-        setProgress(newProgress);
-        
-        if (newSamples.length < REQUIRED_SAMPLES) {
-          console.log(`🔄 Need more samples: ${newSamples.length}/${REQUIRED_SAMPLES}`);
-          setInstruction(`✅ Sample ${newSamples.length}/${REQUIRED_SAMPLES} captured! Preparing next pose...`);
-          setTimeout(() => {
-            console.log('🔄 Starting next capture sequence...');
-            setCaptureStatus(''); // Reset status for next capture
-            setCountdown(3);
-            const countdownInterval = setInterval(() => {
-              setCountdown(prev => {
-                if (prev <= 1) {
-                  clearInterval(countdownInterval);
-                  console.log('⏰ Countdown finished, executing next action');
-                  executeCurrentAction();
-                  return 0;
-                }
-                return prev - 1;
-              });
-            }, 1000);
-          }, 1000);
-        } else {
-          console.log('🏁 All samples collected! Starting enrollment completion...');
-          completeFaceEnrollment(newSamples);
-        }
-      } else {
-        console.log(`❌ Face detection failed: ${detections.length} faces detected`);
-        setInstruction('Face not detected clearly. Please hold still and try again.');
+        // Force transition after 2 seconds regardless
         setTimeout(() => {
-          console.log('🔄 Retrying current action after face detection failure');
-          executeCurrentAction();
-        }, 1000);
+          console.log('Forcing transition to position step after timeout');
+          setIsLoading(false);
+          setCurrentStep('position');
+          setInstruction('Position your face in the center of the frame');
+          startFaceDetection();
+        }, 2000);
       }
     } catch (error) {
-      console.error('❌ Capture error:', error);
-      console.error('❌ Error details:', error.message);
-      setInstruction('Error capturing face. Please try again.');
-      setTimeout(() => {
-        console.log('🔄 Retrying current action after capture error');
-        executeCurrentAction();
-      }, 1000);
+      console.error('Camera access error:', error);
+      onError('Failed to access camera');
     }
-  }, [capturedSamples, executeCurrentAction, completeFaceEnrollment]);
-
-  const completeFaceEnrollment = useCallback(async (samples) => {
-    try {
-      setCurrentStep('processing');
-      setInstruction('Processing your face data...');
-      
-      // Calculate average descriptor from all samples
-      const avgDescriptor = new Array(samples[0].length).fill(0);
-      samples.forEach(sample => {
-        sample.forEach((value, index) => {
-          avgDescriptor[index] += value;
-        });
-      });
-      avgDescriptor.forEach((_, index) => {
-        avgDescriptor[index] /= samples.length;
-      });
-
-      console.log('Sending face enrollment data:', {
-        studentId,
-        descriptorLength: avgDescriptor.length,
-        sampleCount: samples.length,
-        apiUrl: `${API_BASE_URL}/students/enroll-face`
-      });
-
-      // Send to backend
-      const response = await axios.post(`${API_BASE_URL}/students/enroll-face`, {
-        studentId,
-        faceDescriptor: avgDescriptor,
-        sampleCount: samples.length
-      });
-
-      console.log('✅ Enrollment response received:', response.data);
-      console.log('✅ Face data successfully stored in database!');
-
-      setCurrentStep('complete');
-      setInstruction('🎉 Face enrollment completed successfully! Your face has been saved and is ready for verification.');
-      
-      // Show success notification
-      setTimeout(() => {
-        setInstruction('✅ Enrollment Complete! You can now use face verification for attendance.');
-      }, 2000);
-      
-      if (onFaceEnrolled) {
-        onFaceEnrolled({
-          studentId,
-          faceDescriptor: avgDescriptor,
-          sampleCount: samples.length,
-          success: true
-        });
-      }
-    } catch (error) {
-      console.error('❌ Enrollment error:', error);
-      console.error('❌ Error details:', error.response?.data);
-      console.error('❌ Network status:', error.response?.status);
-      console.error('❌ API URL used:', `${API_BASE_URL}/students/enroll-face`);
-      
-      // Handle duplicate face error specifically
-      if (error.response?.status === 409) {
-        const errorData = error.response.data;
-        console.error('⚠️ Duplicate face detected:', errorData);
-        
-        setCurrentStep('complete');
-        setInstruction('❌ Face Already Registered');
-        
-        const duplicateMessage = errorData.message || 
-          `This face is already registered for another student (${errorData.existingStudentId}). Each person can only enroll their face once in the system.`;
-        
-        onError(duplicateMessage);
-        return;
-      }
-      
-      const errorMessage = error.response?.data?.error || error.message;
-      console.error('❌ Final error message:', errorMessage);
-      
-      onError(`Failed to enroll face: ${errorMessage}. Please try again.`);
-    }
-  }, [studentId, onFaceEnrolled, onError, API_BASE_URL]);
+  }, [onError, startFaceDetection]);
 
   const getInstructionColor = () => {
     if (currentStep === 'complete') return 'var(--success-600)';
     if (currentStep === 'processing') return 'var(--warning-600)';
-    if (faceDetected && facePosition.centered && facePosition.distance === 'good') return 'var(--success-600)';
-    return 'var(--primary-600)';
+    if (faceDetected && facePosition.quality === 'good') return 'var(--success-600)';
+    if (faceDetected) return 'var(--warning-600)';
+    return 'var(--error-600)';
   };
 
+  // Effect to load models on component mount
+  useEffect(() => {
+    loadModels();
+  }, [loadModels]);
+
   return (
-    <div className="max-w-2xl mx-auto p-6 theme-transition" style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '1rem' }}>
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
-          Enhanced Face Enrollment
-        </h2>
-        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Follow the guided instructions for optimal face recognition
-        </p>
-      </div>
-
-      {/* Progress Bar and Sample Indicators */}
-      {currentStep === 'capture' && (
-        <div className="mb-4">
-          <div className="flex justify-between text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
-            <span>Samples Captured</span>
-            <span>{capturedSamples.length}/{REQUIRED_SAMPLES}</span>
-          </div>
-          <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: 'var(--bg-tertiary)' }}>
-            <div 
-              className="h-2 rounded-full transition-all duration-300" 
-              style={{ 
-                backgroundColor: 'var(--success-500)', 
-                width: `${progress}%` 
-              }}
-            />
-          </div>
-          {/* Sample Capture Indicators */}
-          <div className="flex justify-center space-x-2 mb-4">
-            {[...Array(REQUIRED_SAMPLES)].map((_, index) => (
-              <div
-                key={index}
-                className={`w-4 h-4 rounded-full border-2 transition-all duration-300 ${
-                  index < capturedSamples.length 
-                    ? 'animate-pulse' 
-                    : ''
-                }`}
-                style={{
-                  backgroundColor: index < capturedSamples.length ? 'var(--success-500)' : 'transparent',
-                  borderColor: index < capturedSamples.length ? 'var(--success-500)' : 'var(--border-primary)',
-                  transform: index < capturedSamples.length ? 'scale(1.1)' : 'scale(1)'
-                }}
-              >
-                {index < capturedSamples.length && (
-                  <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold">
-                    ✓
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Camera Feed */}
-      <div className="relative mb-4">
+    <div className="face-enrollment-container">
+      <div className="video-container">
         <video
           ref={videoRef}
           autoPlay
+          playsInline
           muted
-          className="w-full rounded-lg"
-          style={{ maxHeight: '400px', objectFit: 'cover' }}
+          className="video-feed"
         />
         <canvas
           ref={canvasRef}
-          className="absolute top-0 left-0 w-full h-full"
-          width={640}
-          height={480}
-          style={{ maxHeight: '400px' }}
+          className="detection-overlay"
         />
-        
-        {/* Countdown Overlay */}
-        {countdown > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-            <div className="text-6xl font-bold text-white animate-pulse">
-              {countdown}
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Instructions */}
-      <div className="text-center mb-4">
-        <p 
-          className="text-lg font-semibold mb-2 transition-colors duration-300"
+      
+      <div className="instruction-panel">
+        <div 
+          className="instruction-text"
           style={{ color: getInstructionColor() }}
         >
           {instruction}
-        </p>
+        </div>
         
-        {currentStep === 'capture' && currentAction && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-center gap-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-              <span>Current action:</span>
-              <span className="font-semibold capitalize" style={{ color: 'var(--primary-600)' }}>
-                {currentAction.replace('_', ' ')}
-              </span>
+        {currentStep === 'capture' && (
+          <div className="capture-progress">
+            <div className="progress-bar">
+              <div 
+                className="progress-fill"
+                style={{ width: `${(capturedSamples.length / REQUIRED_SAMPLES) * 100}%` }}
+              />
             </div>
-            {/* Capture Status Indicator */}
-            {captureStatus && (
-              <div className="flex items-center justify-center gap-2 text-sm">
-                <div 
-                  className={`w-3 h-3 rounded-full ${
-                    captureStatus === 'ready' ? 'bg-yellow-500 animate-pulse' :
-                    captureStatus === 'capturing' ? 'bg-red-500 animate-ping' :
-                    captureStatus === 'captured' ? 'bg-green-500' : ''
-                  }`}
-                />
-                <span style={{ 
-                  color: captureStatus === 'ready' ? 'var(--warning-600)' :
-                         captureStatus === 'capturing' ? 'var(--error-600)' :
-                         captureStatus === 'captured' ? 'var(--success-600)' : 'var(--text-secondary)'
-                }}>
-                  {captureStatus === 'ready' ? 'Ready to capture' :
-                   captureStatus === 'capturing' ? '📸 Capturing now!' :
-                   captureStatus === 'captured' ? '✅ Captured!' : ''}
-                </span>
-              </div>
-            )}
+            <div className="progress-text">
+              {capturedSamples.length} / {REQUIRED_SAMPLES} samples captured
+            </div>
+          </div>
+        )}
+        
+        {isLoading && (
+          <div className="loading-indicator">
+            <div className="spinner" />
+            <span>Loading face detection models...</span>
           </div>
         )}
       </div>
-
-      {/* Status Indicators */}
-      {currentStep === 'position' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <div 
-                className={`w-3 h-3 rounded-full ${
-                  faceDetected ? 'bg-green-500' : 'bg-red-500'
-                }`}
-              />
-              <span style={{ color: 'var(--text-secondary)' }}>
-                Face {faceDetected ? 'Detected' : 'Not Detected'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div 
-                className={`w-3 h-3 rounded-full ${
-                  facePosition.centered ? 'bg-green-500' : 'bg-yellow-500'
-                }`}
-              />
-              <span style={{ color: 'var(--text-secondary)' }}>
-                Position {facePosition.centered ? 'Good' : 'Adjust'}
-              </span>
-            </div>
-          </div>
-          
-          {/* Manual Start Capture Button */}
-          {faceDetected && facePosition.centered && facePosition.distance === 'good' && (
-            <div className="text-center">
-              <button
-                onClick={() => {
-                  console.log('🚀 Manual Start Capture button clicked!');
-                  setCurrentStep('capture');
-                  startCaptureSequence();
-                }}
-                className="px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 hover:scale-105 active:scale-95"
-                style={{ 
-                  backgroundColor: 'var(--success-500)',
-                  boxShadow: '0 4px 12px rgba(34, 197, 94, 0.3)'
-                }}
-              >
-                🎯 Start Face Capture
-              </button>
-              <p className="text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
-                Perfect positioning detected! Click to begin capturing your face.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Success Completion Indicator */}
-      {currentStep === 'complete' && (
-        <div className="text-center p-6 rounded-lg mb-4" style={{ backgroundColor: 'var(--success-100)', border: '2px solid var(--success-300)' }}>
-          <div className="text-6xl mb-4">🎉</div>
-          <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--success-700)' }}>
-            Enrollment Complete!
-          </h3>
-          <p className="text-sm" style={{ color: 'var(--success-600)' }}>
-            Your face has been successfully captured and stored. You can now proceed to use face verification for attendance.
-          </p>
-        </div>
-      )}
-
-      {isLoading && (
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: 'var(--primary-500)' }} />
-          <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
-        </div>
-      )}
     </div>
   );
 };
