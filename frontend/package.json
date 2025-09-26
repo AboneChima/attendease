@@ -21,10 +21,25 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
+    "start": "react-app-rewired start",
+    "build": "react-app-rewired build",
+    "test": "react-app-rewired test",
     "eject": "react-scripts eject"
+  },
+  "browser": {
+    "fs": false,
+    "path": false,
+    "os": false,
+    "crypto": false,
+    "stream": false,
+    "http": false,
+    "https": false,
+    "zlib": false,
+    "url": false,
+    "assert": false,
+    "util": false,
+    "buffer": false,
+    "process": false
   },
   "eslintConfig": {
     "extends": [
@@ -47,6 +62,7 @@
   "devDependencies": {
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
+    "react-app-rewired": "^2.2.1",
     "tailwindcss": "^3.4.17"
   }
 }
