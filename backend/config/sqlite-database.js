@@ -7,10 +7,15 @@ let db = null;
 // Initialize SQLite database
 const initDatabase = async () => {
   try {
+    // Use environment variable for database path in production
+    const dbPath = process.env.SQLITE_DB_PATH || path.join(__dirname, '../database/attendance.db');
+    
     db = await open({
-      filename: path.join(__dirname, '../database/attendance.db'),
+      filename: dbPath,
       driver: sqlite3.Database
     });
+
+    console.log(`SQLite database initialized at: ${dbPath}`);
 
     // Create tables if they don't exist
     await db.exec(`
