@@ -1,0 +1,45 @@
+/* App Layout Styles */
+.App {
+  @apply h-full flex flex-col;
+}
+
+/* Remove default React styles and add modern layout */
+.page-layout {
+  @apply min-h-screen bg-gradient-to-br from-secondary-50 to-primary-50 flex flex-col;
+}
+
+.page-content {
+  @apply flex-1 pt-4 pb-8;
+}
+
+/* Enhanced container styles */
+.container-fluid {
+  @apply w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto;
+}
+
+/* Smooth transitions for all interactive elements */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  @apply outline-none ring-2 ring-primary-500 ring-opacity-50;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-secondary-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-secondary-400 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-secondary-500;
+}

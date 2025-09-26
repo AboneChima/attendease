@@ -1,0 +1,24 @@
+{
+  "name": "oracle-attendance-pro",
+  "version": "1.0.0",
+  "description": "Oracle Attendance Pro - Advanced biometric and QR-based attendance management system with comprehensive audit trails and student management",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start": "npm run dev"
+  },
+  "keywords": ["attendance-management", "biometric", "qr-code", "student-management", "audit-system", "react", "nodejs", "sqlite", "oracle"],
+  "author": "Oracle",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oracle/oracle-attendance-pro"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
+  }
+}
