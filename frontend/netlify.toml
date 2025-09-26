@@ -9,3 +9,4 @@
 
 [build.environment]
   REACT_APP_API_URL = "https://attendease-backend-ovl6.onrender.com/api"
+  NODE_VERSION = "20"
