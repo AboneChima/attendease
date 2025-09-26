@@ -12,8 +12,54 @@ const QRScanner = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [attendanceMethod, setAttendanceMethod] = useState('qr'); // 'qr', 'face', 'fingerprint', or 'pin'
-  const scannerRef = useRef(null);
   const html5QrcodeScannerRef = useRef(null);
+
+  const stopScanner = useCallback(() => {
+    if (html5QrcodeScannerRef.current) {
+      html5QrcodeScannerRef.current.clear().then(() => {
+        html5QrcodeScannerRef.current = null;
+        setScanning(false);
+      }).catch(error => {
+        console.error("Failed to clear scanner", error);
+        html5QrcodeScannerRef.current = null;
+        setScanning(false);
+      });
+    } else {
+      setScanning(false);
+    }
+  }, []);
+
+  const processQRCode = useCallback(async (decodedText) => {
+    try {
+      // Verify QR code with backend
+      const verifyResponse = await axios.post(`${API_BASE_URL}/students/verify-qr`, {
+        qr_data: decodedText
+      });
+
+      if (verifyResponse.data.valid) {
+        // Record attendance
+        const attendanceResponse = await axios.post(`${API_BASE_URL}/attendance/record`, {
+          student_id: verifyResponse.data.student.student_id
+        });
+
+        setResult({
+          success: true,
+          student: verifyResponse.data.student,
+          attendance: attendanceResponse.data.attendance,
+          message: attendanceResponse.data.message
+        });
+      } else {
+        setError('Invalid QR code');
+      }
+    } catch (error) {
+      console.error('QR processing error:', error);
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError('Failed to process QR code');
+      }
+    }
+  }, []);
 
   const onScanSuccess = useCallback(async (decodedText, decodedResult) => {
     setLoading(true);
@@ -67,21 +113,6 @@ const QRScanner = () => {
     }
   }, [scanning, onScanSuccess, onScanFailure]);
 
-  const stopScanner = useCallback(() => {
-    if (html5QrcodeScannerRef.current) {
-      html5QrcodeScannerRef.current.clear().then(() => {
-        html5QrcodeScannerRef.current = null;
-        setScanning(false);
-      }).catch(error => {
-        console.error("Failed to clear scanner", error);
-        html5QrcodeScannerRef.current = null;
-        setScanning(false);
-      });
-    } else {
-      setScanning(false);
-    }
-  }, []);
-
   const handleFileUpload = useCallback(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -131,38 +162,6 @@ const QRScanner = () => {
     }
   }, [processQRCode]);
 
-  const processQRCode = useCallback(async (decodedText) => {
-    try {
-      // Verify QR code with backend
-      const verifyResponse = await axios.post(`${API_BASE_URL}/students/verify-qr`, {
-        qr_data: decodedText
-      });
-
-      if (verifyResponse.data.valid) {
-        // Record attendance
-        const attendanceResponse = await axios.post(`${API_BASE_URL}/attendance/record`, {
-          student_id: verifyResponse.data.student.student_id
-        });
-
-        setResult({
-          success: true,
-          student: verifyResponse.data.student,
-          attendance: attendanceResponse.data.attendance,
-          message: attendanceResponse.data.message
-        });
-      } else {
-        setError('Invalid QR code');
-      }
-    } catch (error) {
-      console.error('QR processing error:', error);
-      if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else {
-        setError('Failed to process QR code');
-      }
-    }
-  }, []);
-
   const handleFaceVerificationSuccess = useCallback(async (student) => {
     try {
       setLoading(true);
@@ -191,37 +190,6 @@ const QRScanner = () => {
   }, []);
 
   const handleFaceVerificationError = useCallback((errorMessage) => {
-    setError(errorMessage);
-  }, []);
-
-  const handleFingerprintVerificationSuccess = useCallback(async (student) => {
-    try {
-      setLoading(true);
-      
-      // Record attendance for fingerprint verification
-      const attendanceResponse = await axios.post(`${API_BASE_URL}/attendance/record`, {
-        student_id: student.student_id
-      });
-
-      setResult({
-        success: true,
-        student: student,
-        attendance: attendanceResponse.data.attendance,
-        message: attendanceResponse.data.message
-      });
-    } catch (error) {
-      console.error('Fingerprint verification attendance error:', error);
-      if (error.response?.data?.error) {
-        setError(error.response.data.error);
-      } else {
-        setError('Failed to record attendance');
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const handleFingerprintVerificationError = useCallback((errorMessage) => {
     setError(errorMessage);
   }, []);
 

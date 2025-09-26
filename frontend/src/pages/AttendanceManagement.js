@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { Calendar, Users, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, BarChart3, History } from 'lucide-react';
 import API_BASE_URL from '../config/api';
@@ -14,11 +14,7 @@ const AttendanceManagement = () => {
 
   const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    fetchAttendanceData();
-  }, [selectedDate]);
-
-  const fetchAttendanceData = async () => {
+  const fetchAttendanceData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -40,7 +36,11 @@ const AttendanceManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, token]);
+
+  useEffect(() => {
+    fetchAttendanceData();
+  }, [fetchAttendanceData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

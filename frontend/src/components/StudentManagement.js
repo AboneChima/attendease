@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Trash2, Plus, Search, User, Mail, Phone, Calendar } from 'lucide-react';
+import { Edit, Trash2, Search, User, Mail, Phone, Calendar } from 'lucide-react';
 import './StudentManagement.css';
 
 const StudentManagement = () => {

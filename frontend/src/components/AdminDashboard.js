@@ -16,10 +16,6 @@ const AdminDashboard = () => {
   });
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [filters.page, fetchAuditLogs]);
-
   const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -56,6 +52,10 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   }, [filters]);
+
+  useEffect(() => {
+    fetchAuditLogs();
+  }, [filters.page, fetchAuditLogs]);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({

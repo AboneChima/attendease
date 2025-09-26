@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 
 // Add CSS for spin animation
 const addSpinAnimation = () => {

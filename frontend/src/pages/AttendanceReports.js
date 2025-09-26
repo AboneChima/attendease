@@ -18,11 +18,6 @@ const AttendanceReports = () => {
 
   const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    fetchStudents();
-    fetchDateAttendance();
-  }, [fetchStudents, fetchDateAttendance]);
-
   const fetchStudents = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/students`);
@@ -45,6 +40,11 @@ const AttendanceReports = () => {
       setLoading(false);
     }
   }, [selectedDate, token]);
+
+  useEffect(() => {
+    fetchStudents();
+    fetchDateAttendance();
+  }, [fetchStudents, fetchDateAttendance]);
 
   const fetchStudentAttendance = useCallback(async () => {
     if (!selectedStudent) return;

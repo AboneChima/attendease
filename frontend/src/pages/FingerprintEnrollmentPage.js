@@ -49,11 +49,6 @@ const FingerprintEnrollmentPage = () => {
     }
   };
 
-  const handleEnrollmentCancel = () => {
-    setShowEnrollment(false);
-    setEnrollmentResult(null);
-  };
-
   const handleReset = () => {
     setStudentId('');
     setShowEnrollment(false);

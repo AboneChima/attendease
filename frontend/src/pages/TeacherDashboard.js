@@ -12,10 +12,6 @@ const TeacherDashboard = () => {
   const teacher = JSON.parse(localStorage.getItem('teacher') || '{}');
   const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
-
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -39,6 +35,10 @@ const TeacherDashboard = () => {
       setLoading(false);
     }
   }, [token]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const formatTime = (timeString) => {
     return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
