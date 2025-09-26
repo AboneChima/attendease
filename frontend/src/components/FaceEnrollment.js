@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 
 const FaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
@@ -11,14 +11,7 @@ const FaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
   const videoRef = useRef();
   const canvasRef = useRef();
 
-  useEffect(() => {
-    loadModels();
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       setIsLoading(true);
       // Use CDN URLs for reliable model loading
@@ -29,17 +22,18 @@ const FaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
         faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
       ]);
-      
+
+      console.log('Models loaded successfully');
       setModelsLoaded(true);
       setIsLoading(false);
     } catch (error) {
-      console.error('Error loading face-api models:', error);
-      onError('Failed to load face recognition models');
+      console.error('Error loading models:', error);
       setIsLoading(false);
+      onError('Failed to load face detection models');
     }
-  };
+  }, [onError]);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 }
@@ -53,7 +47,14 @@ const FaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       console.error('Error accessing camera:', error);
       onError('Failed to access camera. Please ensure camera permissions are granted.');
     }
-  };
+  }, [onError]);
+
+  useEffect(() => {
+    loadModels();
+    return () => {
+      stopCamera();
+    };
+  }, [loadModels]);
 
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
