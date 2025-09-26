@@ -59,39 +59,129 @@
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn package manager
+- Node.js (v18 or higher)
+- npm package manager
 - Modern web browser with camera support
+- Git for version control
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/oracle/oracle-attendance-pro.git
-   cd oracle-attendance-pro
+   git clone https://github.com/your-username/automated-attendance.git
+   cd automated-attendance
    ```
 
-2. **Install all dependencies**
+2. **Install Backend Dependencies**
    ```bash
-   npm run install-all
+   cd backend
+   npm install
    ```
 
-3. **Set up environment variables**
+3. **Install Frontend Dependencies**
+   ```bash
+   cd ../frontend
+   npm install
+   ```
+
+4. **Set up Environment Variables**
+   
+   Create a `.env` file in the backend directory:
    ```bash
    # Backend (.env)
-   JWT_SECRET=your-super-secret-jwt-key
+   JWT_SECRET=your-super-secret-jwt-key-here
    PORT=3000
    NODE_ENV=development
+   DB_PATH=./database/attendance.db
    ```
 
-4. **Start the application**
+5. **Initialize Database**
+   ```bash
+   cd backend
+   npm run init-db
+   ```
+
+6. **Start the Application**
+   
+   **Option 1: Start both servers separately**
+   ```bash
+   # Terminal 1 - Backend
+   cd backend
+   npm start
+   
+   # Terminal 2 - Frontend
+   cd frontend
+   npm start
+   ```
+   
+   **Option 2: Use development script (if available)**
    ```bash
    npm run dev
    ```
 
-5. **Access the application**
+7. **Access the Application**
    - Frontend: http://localhost:3001
    - Backend API: http://localhost:3000
+   - Admin Dashboard: http://localhost:3001/admin
+
+### 🔧 Development Setup
+
+1. **Build for Production**
+   ```bash
+   # Frontend build
+   cd frontend
+   npm run build
+   
+   # Backend (already production ready)
+   cd backend
+   npm start
+   ```
+
+2. **Run Tests**
+   ```bash
+   # Frontend tests
+   cd frontend
+   npm test
+   
+   # Backend tests (if available)
+   cd backend
+   npm test
+   ```
+
+3. **Lint and Format Code**
+   ```bash
+   # Frontend linting
+   cd frontend
+   npm run lint
+   
+   # Build check
+   npm run build
+   ```
+
+### 🌐 Deployment
+
+#### Frontend (Netlify)
+1. Build the frontend: `npm run build`
+2. Deploy the `build` folder to Netlify
+3. Configure environment variables in Netlify dashboard
+
+#### Backend (Render/Heroku)
+1. Push to your Git repository
+2. Connect to Render or Heroku
+3. Set environment variables
+4. Deploy with automatic builds
+
+#### Environment Variables for Production
+```bash
+# Backend Production
+JWT_SECRET=your-production-jwt-secret
+NODE_ENV=production
+PORT=3000
+DB_PATH=./database/attendance.db
+
+# Frontend Production (if needed)
+REACT_APP_API_URL=https://your-backend-url.com
+```
 
 ## 📱 Usage Guide
 
