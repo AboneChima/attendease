@@ -1,6 +1,6 @@
 [build]
   base = "frontend"
-  publish = "frontend/frontend/build"
+  publish = "frontend/build"
   command = "npm run build"
 
 [[redirects]]
@@ -11,3 +11,4 @@
 [build.environment]
   REACT_APP_API_URL = "https://attendease-backend-ovl6.onrender.com/api"
   NODE_VERSION = "18.20.4"
+  CI = "false"

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
-import axios from 'axios';
 
 const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
   const videoRef = useRef();
@@ -9,43 +8,13 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
   const [currentStep, setCurrentStep] = useState('loading'); // loading, position, capture, processing, complete
   const [instruction, setInstruction] = useState('Loading face detection models...');
   const [capturedSamples, setCapturedSamples] = useState([]);
-  const [progress, setProgress] = useState(0);
   const [faceDetected, setFaceDetected] = useState(false);
   const [facePosition, setFacePosition] = useState({ distance: 'unknown', centered: false });
   const [currentAction, setCurrentAction] = useState(null); // 'blink', 'smile', 'neutral', 'turn_left', 'turn_right'
-  const [countdown, setCountdown] = useState(0);
-  const [captureStatus, setCaptureStatus] = useState(''); // 'ready', 'capturing', 'captured'
 
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const REQUIRED_SAMPLES = 1;
-  const FACE_ACTIONS = ['neutral'];
 
-  useEffect(() => {
-    loadModels();
-  }, [loadModels]);
-
-  const loadModels = useCallback(async () => {
-    try {
-      console.log('🤖 Starting face detection model loading...');
-      setInstruction('Loading AI models...');
-      const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
-      
-      console.log('📥 Loading face detection models from:', MODEL_URL);
-      await Promise.all([
-        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
-      ]);
-      
-      console.log('✅ All face detection models loaded successfully');
-      await startCamera();
-    } catch (error) {
-      console.error('Error loading models:', error);
-      onError('Failed to load face detection models');
-    }
-  }, [onError]);
-
+  // Function definitions in proper order to avoid use-before-define warnings
   const analyzeFacePosition = useCallback((detection) => {
     const box = detection.detection.box;
     const videoWidth = videoRef.current.videoWidth;
@@ -59,13 +28,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     const offsetX = Math.abs(centerX - videoCenterX);
     const offsetY = Math.abs(centerY - videoCenterY);
     
-    const isWellCentered = offsetX < 50 && offsetY < 50;
+    const faceRatio = (box.width * box.height) / (videoWidth * videoHeight);
     
-    // Estimate distance based on face size
-    const faceArea = box.width * box.height;
-    const videoArea = videoWidth * videoHeight;
-    const faceRatio = faceArea / videoArea;
-    
+    const isWellCentered = offsetX < videoWidth * 0.1 && offsetY < videoHeight * 0.1;
     const isGoodDistance = faceRatio > 0.05 && faceRatio < 0.25;
     
     setFacePosition({
@@ -121,11 +86,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       setCurrentStep('complete');
       setInstruction('Face enrollment completed successfully!');
       
-      // Call the completion callback
       if (onFaceEnrolled) {
         onFaceEnrolled(enrollmentData);
       }
-      
     } catch (error) {
       console.error('❌ Face enrollment failed:', error);
       onError('Face enrollment failed: ' + error.message);
@@ -162,7 +125,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
           console.log(`🔄 Need ${REQUIRED_SAMPLES - newSamples.length} more samples`);
           setTimeout(() => {
             console.log('🎬 Moving to next action');
-            executeCurrentAction();
+            captureCurrentFrame();
           }, 1000);
         }
       } else {
@@ -170,7 +133,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         setInstruction('Face not detected clearly. Please position yourself properly and try again.');
         setTimeout(() => {
           console.log('🔄 Retrying current action after detection failure');
-          executeCurrentAction();
+          captureCurrentFrame();
         }, 1000);
       }
     } catch (error) {
@@ -179,53 +142,27 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       setInstruction('Error capturing face. Please try again.');
       setTimeout(() => {
         console.log('🔄 Retrying current action after capture error');
-        executeCurrentAction();
+        captureCurrentFrame();
       }, 1000);
     }
-  }, [capturedSamples, executeCurrentAction, completeFaceEnrollment, currentAction]);
-
-  const executeCurrentAction = useCallback(() => {
-    console.log('🎬 executeCurrentAction called with:', currentAction);
-    if (currentAction && currentAction.type === 'capture') {
-      console.log('📸 Executing capture action');
-      captureCurrentFrame();
-    } else {
-      console.log('⚠️ No valid action to execute:', currentAction);
-    }
-  }, [currentAction, captureCurrentFrame]);
+  }, [capturedSamples, currentAction, completeFaceEnrollment]);
 
   const startCaptureSequence = useCallback(() => {
     console.log('🎬 Starting capture sequence...');
     setCurrentStep('capture');
     setInstruction('Hold still while we capture your face...');
     
-    const actions = [
-      { type: 'capture', instruction: 'Look straight ahead' },
-      { type: 'capture', instruction: 'Slight smile' },
-      { type: 'capture', instruction: 'Look slightly left' },
-      { type: 'capture', instruction: 'Look slightly right' },
-      { type: 'capture', instruction: 'Final capture' }
-    ];
-    
-    let currentIndex = 0;
-    
-    const processNextAction = () => {
-      if (currentIndex < actions.length && capturedSamples.length < REQUIRED_SAMPLES) {
-        const action = actions[currentIndex];
-        console.log(`🎯 Setting action ${currentIndex + 1}:`, action);
-        setCurrentAction(action);
-        setInstruction(action.instruction);
-        currentIndex++;
-        
-        setTimeout(() => {
-          console.log('⏰ Timeout reached, executing current action');
-          executeCurrentAction();
-        }, 2000);
-      }
-    };
-    
-    processNextAction();
-  }, [capturedSamples.length, executeCurrentAction]);
+    // Immediately capture the first sample
+    setTimeout(() => {
+      setCurrentAction({ type: 'capture', instruction: 'Look straight ahead' });
+      setInstruction('Look straight ahead');
+      
+      setTimeout(() => {
+        console.log('⏰ Starting first capture');
+        captureCurrentFrame();
+      }, 1000);
+    }, 500);
+  }, [captureCurrentFrame]);
 
   const handlePositioning = useCallback((detection) => {
     const position = analyzeFacePosition(detection);
@@ -265,6 +202,11 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         if (canvasRef.current) {
           const canvas = canvasRef.current;
           const ctx = canvas.getContext('2d');
+          
+          // Set canvas dimensions to match video
+          canvas.width = videoRef.current.videoWidth;
+          canvas.height = videoRef.current.videoHeight;
+          
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           if (detections.length === 1) {
@@ -356,6 +298,28 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     if (faceDetected) return 'var(--warning-600)';
     return 'var(--error-600)';
   };
+
+  const loadModels = useCallback(async () => {
+    try {
+      console.log('🤖 Starting face detection model loading...');
+      setInstruction('Loading AI models...');
+      const MODEL_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
+      
+      console.log('📥 Loading face detection models from:', MODEL_URL);
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL)
+      ]);
+      
+      console.log('✅ All face detection models loaded successfully');
+      await startCamera();
+    } catch (error) {
+      console.error('Error loading models:', error);
+      onError('Failed to load face detection models');
+    }
+  }, [onError, startCamera]);
 
   // Effect to load models on component mount
   useEffect(() => {
