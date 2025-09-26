@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
@@ -14,9 +14,9 @@ const TeacherDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -38,7 +38,7 @@ const TeacherDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   const formatTime = (timeString) => {
     return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {

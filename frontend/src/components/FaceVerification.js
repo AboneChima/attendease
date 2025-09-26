@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
@@ -25,7 +25,7 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
     };
   }, []);
 
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       setIsLoading(true);
       console.log('Loading face verification models...');
@@ -46,9 +46,9 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
       onError('Failed to load face recognition models');
       setIsLoading(false);
     }
-  };
+  }, [onError]);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       console.log('Starting camera for face verification...');
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -69,18 +69,18 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
       console.error('Error accessing camera:', error);
       onError('Failed to access camera. Please ensure camera permissions are granted.');
     }
-  };
+  }, [onError]);
 
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
       tracks.forEach(track => track.stop());
       videoRef.current.srcObject = null;
       setCameraActive(false);
     }
-  };
+  }, []);
 
-  const startVerification = () => {
+  const startVerification = useCallback(() => {
     setCountdown(3);
     setVerificationResult(null);
     
@@ -94,9 +94,9 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
         return prev - 1;
       });
     }, 1000);
-  };
+  }, []);
 
-  const performVerification = async () => {
+  const performVerification = useCallback(async () => {
     if (!videoRef.current || !modelsLoaded) {
       console.log('Verification failed: video or models not ready', { videoReady: !!videoRef.current, modelsLoaded });
       return;
@@ -193,16 +193,16 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
     }
     
     setIsVerifying(false);
-  };
+  }, [modelsLoaded, onVerificationSuccess]);
 
-  const resetVerification = () => {
+  const resetVerification = useCallback(() => {
     setVerificationResult(null);
     setCountdown(0);
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext('2d');
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
-  };
+  }, []);
 
   if (isLoading) {
     return (

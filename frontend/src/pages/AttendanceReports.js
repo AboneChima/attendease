@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
@@ -21,18 +21,18 @@ const AttendanceReports = () => {
   useEffect(() => {
     fetchStudents();
     fetchDateAttendance();
-  }, []);
+  }, [fetchStudents, fetchDateAttendance]);
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/students`);
       setStudents(response.data);
     } catch (error) {
       console.error('Fetch students error:', error);
     }
-  };
+  }, []);
 
-  const fetchDateAttendance = async (date = selectedDate) => {
+  const fetchDateAttendance = useCallback(async (date = selectedDate) => {
     try {
       setLoading(true);
       const headers = { 'Authorization': `Bearer ${token}` };
@@ -44,9 +44,9 @@ const AttendanceReports = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, token]);
 
-  const fetchStudentAttendance = async () => {
+  const fetchStudentAttendance = useCallback(async () => {
     if (!selectedStudent) return;
 
     try {
@@ -66,7 +66,7 @@ const AttendanceReports = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStudent, startDate, endDate, token]);
 
   const handleTabChange = (newValue) => {
     setTabValue(newValue);

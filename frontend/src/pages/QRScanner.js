@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Html5QrcodeScanner, Html5Qrcode } from 'html5-qrcode';
 import axios from 'axios';
 import FaceVerification from '../components/FaceVerification';
@@ -15,7 +15,7 @@ const QRScanner = () => {
   const scannerRef = useRef(null);
   const html5QrcodeScannerRef = useRef(null);
 
-  const onScanSuccess = async (decodedText, decodedResult) => {
+  const onScanSuccess = useCallback(async (decodedText, decodedResult) => {
     setLoading(true);
     
     try {
@@ -30,18 +30,18 @@ const QRScanner = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [stopScanner, processQRCode]);
 
-  const onScanFailure = (error) => {
+  const onScanFailure = useCallback((error) => {
     // Handle scan failure silently - this is called frequently during scanning
     console.warn(`QR scan error: ${error}`);
-  };
+  }, []);
 
-  const startScanner = () => {
+  const startScanner = useCallback(() => {
     setScanning(true);
     setResult(null);
     setError(null);
-  };
+  }, []);
 
   // Initialize scanner after DOM element is available
   useEffect(() => {
@@ -65,9 +65,9 @@ const QRScanner = () => {
         }
       }, 100);
     }
-  }, [scanning]);
+  }, [scanning, onScanSuccess, onScanFailure]);
 
-  const stopScanner = () => {
+  const stopScanner = useCallback(() => {
     if (html5QrcodeScannerRef.current) {
       html5QrcodeScannerRef.current.clear().then(() => {
         html5QrcodeScannerRef.current = null;
@@ -80,9 +80,9 @@ const QRScanner = () => {
     } else {
       setScanning(false);
     }
-  };
+  }, []);
 
-  const handleFileUpload = async (event) => {
+  const handleFileUpload = useCallback(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -129,9 +129,9 @@ const QRScanner = () => {
       // Reset file input
       event.target.value = '';
     }
-  };
+  }, [processQRCode]);
 
-  const processQRCode = async (decodedText) => {
+  const processQRCode = useCallback(async (decodedText) => {
     try {
       // Verify QR code with backend
       const verifyResponse = await axios.post(`${API_BASE_URL}/students/verify-qr`, {
@@ -161,9 +161,9 @@ const QRScanner = () => {
         setError('Failed to process QR code');
       }
     }
-  };
+  }, []);
 
-  const handleFaceVerificationSuccess = async (student) => {
+  const handleFaceVerificationSuccess = useCallback(async (student) => {
     try {
       setLoading(true);
       
@@ -188,13 +188,13 @@ const QRScanner = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleFaceVerificationError = (errorMessage) => {
+  const handleFaceVerificationError = useCallback((errorMessage) => {
     setError(errorMessage);
-  };
+  }, []);
 
-  const handleFingerprintVerificationSuccess = async (student) => {
+  const handleFingerprintVerificationSuccess = useCallback(async (student) => {
     try {
       setLoading(true);
       
@@ -219,11 +219,11 @@ const QRScanner = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleFingerprintVerificationError = (errorMessage) => {
+  const handleFingerprintVerificationError = useCallback((errorMessage) => {
     setError(errorMessage);
-  };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -234,11 +234,11 @@ const QRScanner = () => {
     };
   }, []);
 
-  const resetScanner = () => {
+  const resetScanner = useCallback(() => {
     setResult(null);
     setError(null);
     setLoading(false);
-  };
+  }, []);
 
   return (
     <div className="page-layout min-h-screen theme-transition animate-fade-in" style={{

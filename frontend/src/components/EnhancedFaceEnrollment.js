@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
 import axios from 'axios';
 
@@ -23,14 +23,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
 
   useEffect(() => {
     loadModels();
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
+  }, [loadModels]);
 
-  const loadModels = async () => {
+  const loadModels = useCallback(async () => {
     try {
       console.log('🤖 Starting face detection model loading...');
       setInstruction('Loading AI models...');
@@ -50,9 +45,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       console.error('Error loading models:', error);
       onError('Failed to load face detection models');
     }
-  };
+  }, [onError]);
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     try {
       console.log('📹 Starting camera initialization...');
       setInstruction('Starting camera...');
@@ -95,9 +90,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       console.error('Camera error:', error);
       onError('Failed to access camera');
     }
-  };
+  }, [onError]);
 
-  const startFaceDetection = () => {
+  const startFaceDetection = useCallback(() => {
     const detectFace = async () => {
       if (videoRef.current && videoRef.current.readyState === 4) {
         const detections = await faceapi
@@ -146,9 +141,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     };
     
     detectFace();
-  };
+  }, [currentStep]);
 
-  const analyzeFacePosition = (detection) => {
+  const analyzeFacePosition = useCallback((detection) => {
     const box = detection.detection.box;
     const videoWidth = videoRef.current.videoWidth;
     const videoHeight = videoRef.current.videoHeight;
@@ -187,9 +182,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
     });
     
     setFacePosition({ distance, centered });
-  };
+  }, []);
 
-  const handlePositioning = (detection) => {
+  const handlePositioning = useCallback((detection) => {
     // Get fresh position data directly from analysis instead of state
     const box = detection.detection.box;
     const videoWidth = videoRef.current.videoWidth;
@@ -230,9 +225,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         startCaptureSequence();
       }, 1000);
     }
-  };
+  }, [currentStep]);
 
-  const startCaptureSequence = () => {
+  const startCaptureSequence = useCallback(() => {
     console.log('🚀 Start Capture Sequence initiated!');
     console.log(`👤 Student ID: ${studentId}`);
     
@@ -254,9 +249,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         return prev - 1;
       });
     }, 1000);
-  };
+  }, [studentId]);
 
-  const executeCurrentAction = () => {
+  const executeCurrentAction = useCallback(() => {
     console.log(`🎬 Executing action ${capturedSamples.length + 1}/${REQUIRED_SAMPLES}`);
     const action = FACE_ACTIONS[capturedSamples.length];
     console.log(`📋 Current action: ${action}`);
@@ -295,14 +290,14 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       console.log('📸 Attempting to capture frame now');
       captureCurrentFrame();
     }, 2000);
-  };
+  }, [capturedSamples.length]);
 
-  const handleCapture = async (detection) => {
+  const handleCapture = useCallback(async (detection) => {
     // This function is called continuously during capture phase
     // The actual capture is triggered by executeCurrentAction
-  };
+  }, []);
 
-  const captureCurrentFrame = async () => {
+  const captureCurrentFrame = useCallback(async () => {
     try {
       console.log('🔍 Starting face detection for capture...');
       const detections = await faceapi
@@ -394,9 +389,9 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
         executeCurrentAction();
       }, 1000);
     }
-  };
+  }, [capturedSamples, executeCurrentAction]);
 
-  const completeFaceEnrollment = async (samples) => {
+  const completeFaceEnrollment = useCallback(async (samples) => {
     try {
       setCurrentStep('processing');
       setInstruction('Processing your face data...');
@@ -471,7 +466,7 @@ const EnhancedFaceEnrollment = ({ studentId, onFaceEnrolled, onError }) => {
       
       onError(`Failed to enroll face: ${errorMessage}. Please try again.`);
     }
-  };
+  }, [studentId, onFaceEnrolled, onError, API_BASE_URL]);
 
   const getInstructionColor = () => {
     if (currentStep === 'complete') return 'var(--success-600)';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import API_BASE_URL from '../config/api';
 import './AdminDashboard.css';
 
@@ -18,9 +18,9 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchAuditLogs();
-  }, [filters.page]);
+  }, [filters.page, fetchAuditLogs]);
 
-  const fetchAuditLogs = async () => {
+  const fetchAuditLogs = useCallback(async () => {
     setLoading(true);
     setError('');
     
@@ -55,7 +55,7 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters]);
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
