@@ -111,10 +111,10 @@ app.listen(PORT, async () => {
         scheduleDailyReset();
         console.log('✅ Daily reset scheduler started successfully!');
         
-        // Perform initial reset if needed (for today)
-        const today = new Date().toISOString().split('T')[0];
-        console.log(`🔄 Checking if daily reset is needed for ${today}...`);
-        await performDailyReset();
+        // Perform initial reset if needed (for today) - temporarily disabled for debugging
+        // const today = new Date().toISOString().split('T')[0];
+        // console.log(`🔄 Checking if daily reset is needed for ${today}...`);
+        // await performDailyReset();
       } catch (resetError) {
         console.error('⚠️ Warning: Daily reset scheduler failed to initialize:', resetError.message);
         console.log('📝 Attendance management will still work, but automatic daily resets may not occur.');
@@ -141,10 +141,10 @@ app.listen(PORT, async () => {
             scheduleDailyReset();
             console.log('✅ Daily reset scheduler started successfully!');
             
-            // Perform initial reset if needed (for today)
-            const today = new Date().toISOString().split('T')[0];
-            console.log(`🔄 Checking if daily reset is needed for ${today}...`);
-            await performDailyReset();
+            // Perform initial reset if needed (for today) - temporarily disabled for debugging
+            // const today = new Date().toISOString().split('T')[0];
+            // console.log(`🔄 Checking if daily reset is needed for ${today}...`);
+            // await performDailyReset();
           } catch (resetError) {
             console.error('⚠️ Warning: Daily reset scheduler failed to initialize:', resetError.message);
             console.log('📝 Attendance management will still work, but automatic daily resets may not occur.');
