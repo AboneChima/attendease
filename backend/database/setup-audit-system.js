@@ -8,7 +8,7 @@ const setupAuditSystem = async () => {
     // Audit log table to track all manual attendance modifications
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS attendance_audit_log (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         student_id TEXT NOT NULL,
         student_name TEXT NOT NULL,
         date DATE NOT NULL,
@@ -30,7 +30,7 @@ const setupAuditSystem = async () => {
     // User roles table for role-based access control
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS user_roles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
         role TEXT NOT NULL DEFAULT 'viewer' CHECK (role IN ('admin', 'teacher', 'viewer')),
         can_modify_attendance BOOLEAN DEFAULT FALSE,
@@ -45,7 +45,7 @@ const setupAuditSystem = async () => {
     // Attendance modification settings table
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS attendance_modification_settings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         setting_name TEXT NOT NULL UNIQUE,
         setting_value TEXT NOT NULL,
         description TEXT NULL,

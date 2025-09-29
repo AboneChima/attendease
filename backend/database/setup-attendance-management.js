@@ -8,7 +8,7 @@ const setupAttendanceManagement = async () => {
     // Daily attendance tracking table
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS daily_attendance (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         student_id TEXT NOT NULL,
         student_name TEXT NOT NULL,
         date DATE NOT NULL,
@@ -25,7 +25,7 @@ const setupAttendanceManagement = async () => {
     // Historical attendance records table
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS attendance_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         date DATE NOT NULL UNIQUE,
         total_students INTEGER NOT NULL,
         present_count INTEGER NOT NULL,
@@ -39,7 +39,7 @@ const setupAttendanceManagement = async () => {
     // Attendance sessions table
     await dbAdapter.execute(`
       CREATE TABLE IF NOT EXISTS attendance_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         session_date DATE NOT NULL UNIQUE,
         reset_time DATETIME DEFAULT CURRENT_TIMESTAMP,
         total_students INTEGER NOT NULL
