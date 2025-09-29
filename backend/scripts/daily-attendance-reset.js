@@ -125,10 +125,10 @@ const performDailyReset = async () => {
       });
     });
 
-    // 3. Initialize today's attendance for all students
+    // 3. Initialize today's attendance for all students (PostgreSQL compatible)
     await new Promise((resolve, reject) => {
       const initQuery = `
-        INSERT OR IGNORE INTO daily_attendance (student_id, date, status)
+        INSERT INTO daily_attendance (student_id, date, status)
         SELECT student_id, ? as date, 'not_yet_here' as status
         FROM students
         WHERE student_id NOT IN (
@@ -155,19 +155,38 @@ const performDailyReset = async () => {
           console.error('❌ Error getting student count:', err.message);
           reject(err);
         } else {
-          const sessionQuery = `
-            INSERT OR IGNORE INTO attendance_sessions (session_date, total_students)
-            VALUES (?, ?)
+          // Check if session already exists (PostgreSQL compatible)
+          const checkSessionQuery = `
+            SELECT id FROM attendance_sessions WHERE session_date = ?
           `;
           
-          db.run(sessionQuery, [today, result.total], function(err) {
+          db.get(checkSessionQuery, [today], function(err, existingSession) {
             if (err) {
-              console.error('❌ Error creating attendance session:', err.message);
+              console.error('❌ Error checking attendance session:', err.message);
               reject(err);
+              return;
+            }
+            
+            if (!existingSession) {
+              const sessionQuery = `
+                INSERT INTO attendance_sessions (session_date, total_students)
+                VALUES (?, ?)
+              `;
+              
+              db.run(sessionQuery, [today, result.total], function(err) {
+                if (err) {
+                  console.error('❌ Error creating attendance session:', err.message);
+                  reject(err);
+                } else {
+                  console.log(`📅 Created attendance session for ${today} (${result.total} students)`);
+                  resolve();
+                }
+              });
             } else {
-              console.log(`📅 Created attendance session for ${today} (${result.total} students)`);
+              console.log(`📅 Attendance session for ${today} already exists`);
               resolve();
             }
+          });
           });
         }
       });
