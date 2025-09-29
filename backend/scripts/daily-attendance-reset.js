@@ -22,34 +22,32 @@ const performDailyReset = async () => {
   try {
     // Initialize database adapter
     const db = await initializeDbAdapter();
-    
-    // Start transaction (database adapter handles this appropriately for each DB type)
-    await db.beginTransaction();
 
     // 1. Calculate and save yesterday's attendance summary to history
     const summaryQuery = `
       SELECT 
         COUNT(*) as total_students,
-        COUNT(CASE WHEN status = 'present' THEN 1 END) as present_count,
-        COUNT(CASE WHEN status = 'absent' OR status = 'not_yet_here' THEN 1 END) as absent_count,
-        ROUND(
-          (COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / COUNT(*)), 2
-        ) as attendance_rate
+        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present_count,
+        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_count,
+        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late_count
       FROM daily_attendance 
-      WHERE date = $1
+      WHERE date = ?
     `;
     
-    const summaryResult = await db.query(summaryQuery, [yesterday]);
-    const summary = summaryResult.rows[0];
+    const summary = await db.get(summaryQuery, [yesterday]);
+    
+    // Calculate attendance rate
+    if (summary && summary.total_students > 0) {
+      summary.attendance_rate = Math.round((summary.present_count / summary.total_students) * 100 * 100) / 100;
+    }
     
     if (summary && summary.total_students > 0) {
       // Check if history record already exists
       const checkHistoryQuery = `
-        SELECT id FROM attendance_history WHERE date = $1
+        SELECT id FROM attendance_history WHERE date = ?
       `;
       
-      const historyCheckResult = await db.query(checkHistoryQuery, [yesterday]);
-      const existingRecord = historyCheckResult.rows[0];
+      const existingRecord = await db.get(checkHistoryQuery, [yesterday]);
       
       let historyQuery;
       let historyParams;
@@ -58,22 +56,22 @@ const performDailyReset = async () => {
         // Update existing record
         historyQuery = `
           UPDATE attendance_history 
-          SET total_students = $2, present_count = $3, absent_count = $4, attendance_rate = $5
-          WHERE date = $1
+          SET total_students = ?, present_count = ?, absent_count = ?, attendance_rate = ?
+          WHERE date = ?
         `;
         historyParams = [
-          yesterday,
           summary.total_students,
           summary.present_count,
           summary.absent_count,
-          summary.attendance_rate
+          summary.attendance_rate,
+          yesterday
         ];
       } else {
         // Insert new record
         historyQuery = `
           INSERT INTO attendance_history (
             date, total_students, present_count, absent_count, attendance_rate
-          ) VALUES ($1, $2, $3, $4, $5)
+          ) VALUES (?, ?, ?, ?, ?)
         `;
         historyParams = [
           yesterday,
@@ -84,56 +82,54 @@ const performDailyReset = async () => {
         ];
       }
     
-      await db.query(historyQuery, historyParams);
+      await db.execute(historyQuery, historyParams);
       console.log(`✅ Saved attendance summary for ${yesterday} (${summary.present_count}/${summary.total_students} present, ${summary.attendance_rate}% rate)`);
     } else {
       console.log(`ℹ️ No attendance data found for ${yesterday}`);
     }
 
     // 2. Clear yesterday's daily attendance
-    const deleteResult = await db.query('DELETE FROM daily_attendance WHERE date = $1', [yesterday]);
-    console.log(`🗑️ Cleared ${deleteResult.rowCount || 0} daily attendance records for ${yesterday}`);
+    const deleteResult = await db.execute('DELETE FROM daily_attendance WHERE date = ?', [yesterday]);
+    console.log(`🗑️ Cleared ${deleteResult[0].affectedRows || 0} daily attendance records for ${yesterday}`);
 
-    // 3. Initialize today's attendance for all students (PostgreSQL compatible)
+    // 3. Initialize today's attendance for all students
     const initQuery = `
       INSERT INTO daily_attendance (student_id, date, status)
-      SELECT student_id, $1 as date, 'not_yet_here' as status
+      SELECT student_id, ? as date, 'not_yet_here' as status
       FROM students
       WHERE student_id NOT IN (
-        SELECT student_id FROM daily_attendance WHERE date = $2
+        SELECT student_id FROM daily_attendance WHERE date = ?
       )
     `;
     
-    const initResult = await db.query(initQuery, [today, today]);
-    console.log(`🆕 Initialized ${initResult.rowCount || 0} new attendance records for ${today}`);
+    const initResult = await db.execute(initQuery, [today, today]);
+    console.log(`🆕 Initialized ${initResult[0].affectedRows || 0} new attendance records for ${today}`);
 
     // 4. Create attendance session for today
     // First get the total student count
-    const studentCountResult = await db.query('SELECT COUNT(*) as total FROM students');
-    const totalStudents = studentCountResult.rows[0].total;
+    const studentCountResult = await db.get('SELECT COUNT(*) as total FROM students');
+    const totalStudents = studentCountResult.total;
     
     // Check if session already exists
     const checkSessionQuery = `
-      SELECT id FROM attendance_sessions WHERE session_date = $1
+      SELECT id FROM attendance_sessions WHERE session_date = ?
     `;
     
-    const sessionCheckResult = await db.query(checkSessionQuery, [today]);
-    const existingSession = sessionCheckResult.rows[0];
+    const existingSession = await db.get(checkSessionQuery, [today]);
     
     if (!existingSession) {
       const sessionQuery = `
         INSERT INTO attendance_sessions (session_date, total_students)
-        VALUES ($1, $2)
+        VALUES (?, ?)
       `;
       
-      await db.query(sessionQuery, [today, totalStudents]);
+      await db.execute(sessionQuery, [today, totalStudents]);
       console.log(`📅 Created attendance session for ${today} (${totalStudents} students)`);
     } else {
       console.log(`📅 Attendance session for ${today} already exists`);
     }
 
-    // Commit transaction
-    await db.commitTransaction();
+    // Transaction handling removed - database adapter handles this automatically
 
     // 5. Get summary statistics
     const statsQuery = `
@@ -143,11 +139,10 @@ const performDailyReset = async () => {
         COUNT(CASE WHEN status = 'absent' THEN 1 END) as absent_count,
         COUNT(CASE WHEN status = 'not_yet_here' THEN 1 END) as not_yet_here_count
       FROM daily_attendance 
-      WHERE date = $1
+      WHERE date = ?
     `;
     
-    const statsResult = await db.query(statsQuery, [today]);
-    const stats = statsResult.rows[0];
+    const stats = await db.get(statsQuery, [today]);
 
     console.log('\n📊 Daily Reset Summary:');
     console.log(`   📚 Total Students: ${stats.total_students}`);
@@ -157,14 +152,6 @@ const performDailyReset = async () => {
     console.log(`\n🎉 Daily attendance reset completed successfully for ${today}!\n`);
 
   } catch (error) {
-    // Rollback transaction on error
-    try {
-      const db = await initializeDbAdapter();
-      await db.rollbackTransaction();
-    } catch (rollbackError) {
-      console.error('❌ Error during rollback:', rollbackError.message);
-    }
-    
     console.error('❌ Daily reset failed:', error.message);
     throw error;
   }
@@ -184,11 +171,11 @@ const getAttendanceStats = async (date) => {
         (COUNT(CASE WHEN status = 'present' THEN 1 END) * 100.0 / COUNT(*)), 2
       ) as attendance_rate
     FROM daily_attendance 
-    WHERE date = $1
+    WHERE date = ?
   `;
   
-  const result = await db.query(query, [date]);
-  return result.rows[0] || {
+  const result = await db.get(query, [date]);
+  return result || {
     total_students: 0,
     present_count: 0,
     absent_count: 0,
