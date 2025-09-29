@@ -64,11 +64,17 @@ const setupAuditSystem = async () => {
     await dbAdapter.execute('CREATE INDEX IF NOT EXISTS idx_role ON user_roles(role)');
     console.log('✓ Created indexes');
     
-    // Insert default admin user
-    await dbAdapter.execute(`
-      INSERT OR IGNORE INTO user_roles (username, role, can_modify_attendance, can_view_audit_logs, can_manage_users)
-      VALUES ('admin', 'admin', 1, 1, 1)
+    // Insert default admin user (PostgreSQL compatible)
+    const existingAdmin = await dbAdapter.execute(`
+      SELECT username FROM user_roles WHERE username = 'admin'
     `);
+    
+    if (existingAdmin.length === 0) {
+      await dbAdapter.execute(`
+        INSERT INTO user_roles (username, role, can_modify_attendance, can_view_audit_logs, can_manage_users)
+        VALUES ('admin', 'admin', 1, 1, 1)
+      `);
+    }
     console.log('✓ Created default admin user');
     
     // Insert default settings
@@ -80,10 +86,16 @@ const setupAuditSystem = async () => {
     ];
     
     for (const [name, value, description] of defaultSettings) {
-      await dbAdapter.execute(`
-        INSERT OR IGNORE INTO attendance_modification_settings (setting_name, setting_value, description)
-        VALUES (?, ?, ?)
-      `, [name, value, description]);
+      const existingSetting = await dbAdapter.execute(`
+        SELECT setting_name FROM attendance_modification_settings WHERE setting_name = ?
+      `, [name]);
+      
+      if (existingSetting.length === 0) {
+        await dbAdapter.execute(`
+          INSERT INTO attendance_modification_settings (setting_name, setting_value, description)
+          VALUES (?, ?, ?)
+        `, [name, value, description]);
+      }
     }
     console.log('✓ Inserted default settings');
     
@@ -108,11 +120,23 @@ const addUserRole = async (username, role = 'teacher', permissions = {}) => {
       canManageUsers = role === 'admin'
     } = permissions;
     
-    await dbAdapter.execute(`
-      INSERT OR REPLACE INTO user_roles 
-      (username, role, can_modify_attendance, can_view_audit_logs, can_manage_users)
-      VALUES (?, ?, ?, ?, ?)
-    `, [username, role, canModifyAttendance, canViewAuditLogs, canManageUsers]);
+    const existingUser = await dbAdapter.execute(`
+      SELECT username FROM user_roles WHERE username = ?
+    `, [username]);
+    
+    if (existingUser.length > 0) {
+      await dbAdapter.execute(`
+        UPDATE user_roles 
+        SET role = ?, can_modify_attendance = ?, can_view_audit_logs = ?, can_manage_users = ?
+        WHERE username = ?
+      `, [role, canModifyAttendance, canViewAuditLogs, canManageUsers, username]);
+    } else {
+      await dbAdapter.execute(`
+        INSERT INTO user_roles 
+        (username, role, can_modify_attendance, can_view_audit_logs, can_manage_users)
+        VALUES (?, ?, ?, ?, ?)
+      `, [username, role, canModifyAttendance, canViewAuditLogs, canManageUsers]);
+    }
     
     console.log(`✓ Added/updated user role: ${username} as ${role}`);
   } catch (error) {

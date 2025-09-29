@@ -67,9 +67,13 @@ const setupAttendanceManagement = async () => {
             updated_at = CURRENT_TIMESTAMP
         WHERE student_id = NEW.student_id AND date = NEW.date;
         
-        -- If no record exists in daily_attendance, create one
-        INSERT OR IGNORE INTO daily_attendance (student_id, student_name, date, status, check_in_time)
-        VALUES (NEW.student_id, NEW.student_name, NEW.date, 'present', NEW.time);
+        -- If no record exists in daily_attendance, create one (PostgreSQL compatible)
+        INSERT INTO daily_attendance (student_id, student_name, date, status, check_in_time)
+        SELECT NEW.student_id, NEW.student_name, NEW.date, 'present', NEW.time
+        WHERE NOT EXISTS (
+          SELECT 1 FROM daily_attendance 
+          WHERE student_id = NEW.student_id AND date = NEW.date
+        );
       END
     `);
     console.log('✓ Created trigger for automatic attendance updates');
