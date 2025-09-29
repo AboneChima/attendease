@@ -96,18 +96,38 @@ const initializeDailyAttendance = async (targetDate = null) => {
       return;
     }
     
-    // Insert attendance session record
-    await dbAdapter.execute(`
-      INSERT OR REPLACE INTO attendance_sessions (session_date, total_students, reset_time)
-      VALUES (?, ?, CURRENT_TIMESTAMP)
-    `, [date, students.length]);
+    // Insert or update attendance session record
+    const [existingSession] = await dbAdapter.execute(
+      'SELECT session_date FROM attendance_sessions WHERE session_date = ?',
+      [date]
+    );
+    
+    if (existingSession.length > 0) {
+      await dbAdapter.execute(`
+        UPDATE attendance_sessions 
+        SET total_students = ?, reset_time = CURRENT_TIMESTAMP
+        WHERE session_date = ?
+      `, [students.length, date]);
+    } else {
+      await dbAdapter.execute(`
+        INSERT INTO attendance_sessions (session_date, total_students, reset_time)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+      `, [date, students.length]);
+    }
     
     // Initialize daily attendance for all students
     for (const student of students) {
-      await dbAdapter.execute(`
-        INSERT OR IGNORE INTO daily_attendance (student_id, student_name, date, status)
-        VALUES (?, ?, ?, 'not_yet_here')
-      `, [student.student_id, student.name, date]);
+      const [existingAttendance] = await dbAdapter.execute(
+        'SELECT id FROM daily_attendance WHERE student_id = ? AND date = ?',
+        [student.student_id, date]
+      );
+      
+      if (existingAttendance.length === 0) {
+        await dbAdapter.execute(`
+          INSERT INTO daily_attendance (student_id, student_name, date, status)
+          VALUES (?, ?, ?, 'not_yet_here')
+        `, [student.student_id, student.name, date]);
+      }
     }
     
     // Update students who already have attendance recorded today to 'present'
@@ -160,12 +180,25 @@ const finalizeDailyAttendance = async (targetDate = null) => {
       WHERE date = ? AND status = 'not_yet_here'
     `, [date]);
     
-    // Create historical record
-    await dbAdapter.execute(`
-      INSERT OR REPLACE INTO attendance_history 
-      (date, total_students, present_count, absent_count, attendance_rate)
-      VALUES (?, ?, ?, ?, ?)
-    `, [date, totalStudents, presentCount, absentCount, attendanceRate]);
+    // Create or update historical record
+    const [existingHistory] = await dbAdapter.execute(
+      'SELECT date FROM attendance_history WHERE date = ?',
+      [date]
+    );
+    
+    if (existingHistory.length > 0) {
+      await dbAdapter.execute(`
+        UPDATE attendance_history 
+        SET total_students = ?, present_count = ?, absent_count = ?, attendance_rate = ?
+        WHERE date = ?
+      `, [totalStudents, presentCount, absentCount, attendanceRate, date]);
+    } else {
+      await dbAdapter.execute(`
+        INSERT INTO attendance_history 
+        (date, total_students, present_count, absent_count, attendance_rate)
+        VALUES (?, ?, ?, ?, ?)
+      `, [date, totalStudents, presentCount, absentCount, attendanceRate]);
+    }
     
     console.log(`✓ Finalized attendance: ${presentCount}/${totalStudents} present (${attendanceRate.toFixed(1)}%)`);
     return { totalStudents, presentCount, absentCount, attendanceRate };
