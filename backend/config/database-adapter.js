@@ -60,8 +60,12 @@ class DatabaseAdapter {
       } else if (query.startsWith('INSERT')) {
         // For INSERT queries, we need to add RETURNING id if not already present
         if (!pgQuery.includes('RETURNING')) {
-          pgQuery = pgQuery.replace(/;?\s*$/, ' RETURNING id;');
+          // Remove any trailing semicolon and whitespace, then add RETURNING id
+          pgQuery = pgQuery.replace(/;?\s*$/, '') + ' RETURNING id';
+          console.log('PostgreSQL INSERT Query:', pgQuery);
+          console.log('PostgreSQL INSERT Params:', pgParams);
           const insertResult = await this.postgresPool.query(pgQuery, pgParams);
+          console.log('PostgreSQL INSERT Result:', insertResult.rows);
           return [{ insertId: insertResult.rows[0]?.id || null, affectedRows: insertResult.rowCount }];
         } else {
           return [{ insertId: result.rows[0]?.id || null, affectedRows: result.rowCount }];
