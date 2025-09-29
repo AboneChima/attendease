@@ -44,6 +44,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'QR Attendance System API is running' });
 });
 
+// Diagnostic endpoint to check environment configuration
+app.get('/api/diagnostic', (req, res) => {
+  res.json({
+    status: 'OK',
+    environment: process.env.NODE_ENV || 'development',
+    database_configured: !!process.env.DATABASE_URL,
+    jwt_secret_configured: !!process.env.JWT_SECRET,
+    port: process.env.PORT || 5000,
+    database_type: process.env.DATABASE_URL ? 'PostgreSQL' : (process.env.DB_HOST ? 'MySQL' : 'SQLite')
+  });
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
