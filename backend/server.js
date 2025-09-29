@@ -56,6 +56,31 @@ app.get('/api/diagnostic', (req, res) => {
   });
 });
 
+// Test endpoint to check teacher retrieval
+app.get('/api/test-teacher', async (req, res) => {
+  try {
+    const { dbAdapter } = require('./config/database-adapter');
+    await dbAdapter.initialize();
+    
+    const [teachers] = await dbAdapter.execute(
+      'SELECT id, teacher_id, name, email FROM teachers WHERE email = ?',
+      ['admin@school.com']
+    );
+    
+    res.json({
+      status: 'OK',
+      teacher_found: teachers.length > 0,
+      teacher_count: teachers.length,
+      teacher_data: teachers.length > 0 ? teachers[0] : null
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      error: error.message
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
