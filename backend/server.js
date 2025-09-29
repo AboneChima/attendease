@@ -61,18 +61,12 @@ app.listen(PORT, async () => {
   console.log('Connecting to database...');
   
   try {
-    // Try MySQL first
-    await testMySQLConnection();
-    console.log('Using MySQL database');
-    process.env.DB_TYPE = 'mysql';
-  } catch (error) {
-    console.log('MySQL not available, switching to SQLite...');
-    try {
-      await initDatabase();
-      await setupAttendanceManagement(); // Setup attendance management tables
-      await testSQLiteConnection();
-      console.log('Using SQLite database');
-      process.env.DB_TYPE = 'sqlite';
+    // Check if PostgreSQL is configured first
+    if (process.env.DATABASE_URL) {
+      console.log('PostgreSQL DATABASE_URL detected, using PostgreSQL...');
+      const { dbAdapter } = require('./config/database-adapter');
+      await dbAdapter.initialize();
+      console.log('✅ Using PostgreSQL database');
       
       // Initialize daily attendance reset scheduler
       console.log('\n🕐 Initializing daily attendance reset scheduler...');
@@ -89,9 +83,63 @@ app.listen(PORT, async () => {
         console.log('📝 Attendance management will still work, but automatic daily resets may not occur.');
       }
       
-    } catch (sqliteError) {
-      console.error('Both MySQL and SQLite failed:', sqliteError.message);
-      process.exit(1);
+    } else {
+      // Try MySQL first, then SQLite
+      try {
+        await testMySQLConnection();
+        console.log('Using MySQL database');
+        process.env.DB_TYPE = 'mysql';
+      } catch (error) {
+        console.log('MySQL not available, switching to SQLite...');
+        try {
+          await initDatabase();
+          await setupAttendanceManagement(); // Setup attendance management tables
+          await testSQLiteConnection();
+          console.log('Using SQLite database');
+          process.env.DB_TYPE = 'sqlite';
+          
+          // Initialize daily attendance reset scheduler
+          console.log('\n🕐 Initializing daily attendance reset scheduler...');
+          try {
+            scheduleDailyReset();
+            console.log('✅ Daily reset scheduler started successfully!');
+            
+            // Perform initial reset if needed (for today)
+            const today = new Date().toISOString().split('T')[0];
+            console.log(`🔄 Checking if daily reset is needed for ${today}...`);
+            await performDailyReset();
+          } catch (resetError) {
+            console.error('⚠️ Warning: Daily reset scheduler failed to initialize:', resetError.message);
+            console.log('📝 Attendance management will still work, but automatic daily resets may not occur.');
+          }
+          
+        } catch (sqliteError) {
+          console.error('Both MySQL and SQLite failed:', sqliteError.message);
+          process.exit(1);
+        }
+      }
+    }
+  } catch (postgresError) {
+    console.error('PostgreSQL connection failed:', postgresError.message);
+    console.log('Falling back to MySQL/SQLite...');
+    
+    try {
+      // Try MySQL first
+      await testMySQLConnection();
+      console.log('Using MySQL database');
+      process.env.DB_TYPE = 'mysql';
+    } catch (error) {
+      console.log('MySQL not available, switching to SQLite...');
+      try {
+        await initDatabase();
+        await setupAttendanceManagement(); // Setup attendance management tables
+        await testSQLiteConnection();
+        console.log('Using SQLite database');
+        process.env.DB_TYPE = 'sqlite';
+      } catch (sqliteError) {
+        console.error('All database connections failed:', sqliteError.message);
+        process.exit(1);
+      }
     }
   }
 });
