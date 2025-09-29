@@ -7,6 +7,7 @@ const FingerprintEnrollmentPage = () => {
   const [enrollmentResult, setEnrollmentResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleStudentLookup = async () => {
     if (!studentId.trim()) {
@@ -16,6 +17,7 @@ const FingerprintEnrollmentPage = () => {
 
     setLoading(true);
     setError('');
+    setSuccessMessage('');
     
     try {
       // Check if student exists
@@ -42,10 +44,14 @@ const FingerprintEnrollmentPage = () => {
   const handleEnrollmentComplete = (result) => {
     if (result.success) {
       setShowEnrollment(false);
-      setStudentId('');
-      setEnrollmentResult(null);
-      // Show success message
-      alert('Fingerprint enrolled successfully!');
+      setError('');
+      setSuccessMessage(`Fingerprint enrolled successfully for ${enrollmentResult?.student?.name} (${enrollmentResult?.student?.student_id})!`);
+      // Clear form after a delay to show success message
+      setTimeout(() => {
+        setStudentId('');
+        setEnrollmentResult(null);
+        setSuccessMessage('');
+      }, 5000);
     }
   };
 
@@ -54,6 +60,7 @@ const FingerprintEnrollmentPage = () => {
     setShowEnrollment(false);
     setEnrollmentResult(null);
     setError('');
+    setSuccessMessage('');
   };
 
   return (
@@ -68,6 +75,52 @@ const FingerprintEnrollmentPage = () => {
             Enroll fingerprints for existing students to enable biometric attendance
           </p>
         </div>
+
+        {/* Success Message */}
+        {successMessage && (
+          <div className="max-w-md mx-auto mb-6">
+            <div className="rounded-2xl p-6 border-2" style={{
+              backgroundColor: 'var(--success-50)',
+              borderColor: 'var(--success-200)',
+              color: 'var(--success-800)'
+            }}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold">✅ Enrollment Successful!</h3>
+                  <p className="text-sm mt-1">{successMessage}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="max-w-md mx-auto mb-6">
+            <div className="rounded-2xl p-6 border-2" style={{
+              backgroundColor: 'var(--error-50)',
+              borderColor: 'var(--error-200)',
+              color: 'var(--error-800)'
+            }}>
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold">❌ Enrollment Failed</h3>
+                  <p className="text-sm mt-1">{error}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!showEnrollment ? (
           /* Student Lookup Form */
@@ -114,16 +167,7 @@ const FingerprintEnrollmentPage = () => {
                   />
                 </div>
 
-                {error && (
-                  <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--error-50)' }}>
-                    <div className="flex items-center">
-                      <svg className="w-5 h-5 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-sm" style={{ color: 'var(--error-700)' }}>{error}</p>
-                    </div>
-                  </div>
-                )}
+
 
                 <button
                   onClick={handleStudentLookup}

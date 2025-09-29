@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Oracle Attendance Pro - Backend API with biometric authentication, student management, and comprehensive audit system",
   "main": "server.js",
-  "author": "Oracle",
+  "author": "",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -19,13 +19,17 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
+    "form-data": "^4.0.4",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.6.0",
     "node-cron": "^4.2.1",
+    "node-fetch": "^3.3.2",
+    "pg": "^8.11.3",
     "qrcode": "^1.5.3",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
@@ -36,6 +40,5 @@
     "qr-code",
     "attendance"
   ],
-  "author": "",
   "license": "MIT"
 }

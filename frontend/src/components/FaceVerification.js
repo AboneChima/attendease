@@ -1,47 +1,33 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import * as faceapi from 'face-api.js';
 import axios from 'axios';
 import API_BASE_URL from '../config/api';
 
 const FaceVerification = ({ onVerificationSuccess, onError }) => {
-  const [modelsLoaded, setModelsLoaded] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const videoRef = useRef();
   const canvasRef = useRef();
   const intervalRef = useRef();
+  const streamRef = useRef(null);
 
-  const loadModels = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      console.log('Loading face-api models...');
-      await faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-      await faceapi.nets.faceLandmark68Net.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-      await faceapi.nets.faceRecognitionNet.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api@latest/model');
-      
-      console.log('Face-api models loaded successfully');
-      setModelsLoaded(true);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('Error loading face-api models:', error);
-      setIsLoading(false);
-    }
-  }, []);
+  // Using proper API configuration from config/api.js
 
   const startCamera = useCallback(async () => {
     try {
       console.log('Starting camera...');
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
-          width: 640, 
-          height: 480,
+          width: { ideal: 1280, min: 800 }, 
+          height: { ideal: 720, min: 600 },
           facingMode: 'user'
         } 
       });
+      
+      streamRef.current = stream;
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -50,147 +36,158 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
+      if (onError) {
+        onError('Unable to access camera. Please check permissions.');
+      }
     }
-  }, []);
+  }, [onError]);
 
   const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject;
-      const tracks = stream.getTracks();
+    if (streamRef.current) {
+      const tracks = streamRef.current.getTracks();
       tracks.forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-      setCameraActive(false);
-      console.log('Camera stopped');
+      streamRef.current = null;
     }
+    
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    
+    setCameraActive(false);
+    console.log('Camera stopped');
+  }, []);
+
+  // Capture image from video
+  const captureImage = useCallback(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (!video || !canvas) return null;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Ensure minimum resolution for face detection (at least 800x600)
+    const minWidth = Math.max(video.videoWidth, 800);
+    const minHeight = Math.max(video.videoHeight, 600);
+    
+    canvas.width = minWidth;
+    canvas.height = minHeight;
+    
+    // Draw video frame to canvas, scaling if necessary
+    ctx.drawImage(video, 0, 0, minWidth, minHeight);
+    
+    // Use higher quality JPEG compression (0.95 instead of 0.9)
+    return canvas.toDataURL('image/jpeg', 0.95);
   }, []);
 
   const performVerification = useCallback(async () => {
-    if (!videoRef.current || !modelsLoaded) {
-      console.log('Verification failed: video or models not ready', { videoReady: !!videoRef.current, modelsLoaded });
+    if (!videoRef.current || !cameraActive) {
+      console.log('Verification failed: video or camera not ready');
       return;
     }
 
     console.log('Starting face verification...');
+    console.log('API_BASE_URL being used:', API_BASE_URL);
     setIsVerifying(true);
     
     try {
-      console.log('Detecting faces in verification...');
-      const detections = await faceapi
-        .detectAllFaces(videoRef.current, new faceapi.TinyFaceDetectorOptions({
-          inputSize: 416,
-          scoreThreshold: 0.3
-        }))
-        .withFaceLandmarks()
-        .withFaceDescriptors();
-
-      console.log('Face detection results:', { detectionCount: detections.length });
-
-      if (detections.length === 0) {
-        console.log('No face detected during verification');
-        setVerificationResult({
-          success: false,
-          message: 'No face detected. Please ensure your face is clearly visible.'
-        });
-        setIsVerifying(false);
-        return;
+      // Capture image
+      const imageData = captureImage();
+      if (!imageData) {
+        throw new Error('Failed to capture image');
       }
 
-      if (detections.length > 1) {
-        setVerificationResult({
-          success: false,
-          message: 'Multiple faces detected. Please ensure only one person is in the frame.'
-        });
-        setIsVerifying(false);
-        return;
-      }
+      // Convert image data to blob for file upload
+      const response = await fetch(imageData);
+      const blob = await response.blob();
+      
+      // Log image quality information for debugging
+      console.log('📸 [IMAGE-CAPTURE] Image details:');
+      console.log('  - Blob size:', blob.size, 'bytes');
+      console.log('  - Blob type:', blob.type);
+      console.log('  - Canvas dimensions:', canvasRef.current?.width, 'x', canvasRef.current?.height);
+      console.log('  - Video dimensions:', videoRef.current?.videoWidth, 'x', videoRef.current?.videoHeight);
+      
+      // Create FormData to send photo file
+      const formData = new FormData();
+      formData.append('photo', blob, 'verification.jpg');
+      formData.append('student_id', 'STU01'); // For now, using STU01 as test student
 
-      const faceDescriptor = Array.from(detections[0].descriptor);
-
-      // Send face descriptor to backend for verification
-      const response = await axios.post(`${API_BASE_URL}/students/verify-face`, {
-        faceDescriptor
+      // Send to Node.js backend for verification using the correct endpoint
+      const fullUrl = `${API_BASE_URL}/students/verify-live`;
+      console.log('=== FACE VERIFICATION DEBUG ===');
+      console.log('process.env.REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Full URL being used:', fullUrl);
+      console.log('Making request to:', fullUrl);
+      console.log('Request payload: FormData with photo and student_id');
+      console.log('================================');
+      
+      const apiResponse = await axios.post(fullUrl, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (response.data.valid) {
+      const result = apiResponse.data;
+
+      if (result.valid) {
         setVerificationResult({
           success: true,
-          student: response.data.student,
-          confidence: response.data.confidence,
-          message: `Welcome, ${response.data.student.name}!`
+          student: result.student,
+          confidence: result.confidence,
+          message: `Welcome, ${result.student.name}!`
         });
         
         // Call success callback with student data
-        onVerificationSuccess(response.data.student);
+        onVerificationSuccess(result.student);
       } else {
         setVerificationResult({
           success: false,
-          message: 'Face not recognized. Please try again or use QR code.'
+          message: result.error || 'Face not recognized. Please try again or use QR code.'
         });
       }
 
-      // Draw detection on canvas for visual feedback
-      if (canvasRef.current) {
-        const canvas = canvasRef.current;
-        const displaySize = { width: videoRef.current.videoWidth, height: videoRef.current.videoHeight };
-        faceapi.matchDimensions(canvas, displaySize);
-        
-        const resizedDetections = faceapi.resizeResults(detections, displaySize);
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw face detection box
-        faceapi.draw.drawDetections(canvas, resizedDetections);
-        
-        // Draw confidence score
-        if (response.data.valid) {
-          ctx.fillStyle = '#10B981';
-          ctx.font = '16px Arial';
-          ctx.fillText(
-            `Confidence: ${(response.data.confidence * 100).toFixed(1)}%`,
-            10, 30
-          );
-        }
-      }
-
-    } catch (error) {
-      console.error('Error during face verification:', error);
+    } catch (err) {
+      console.error('Verification error:', err);
       setVerificationResult({
         success: false,
-        message: error.response?.data?.error || 'Verification failed. Please try again.'
+        message: err.message || 'Verification failed. Please try again.'
       });
+      
+      if (onError) {
+        onError(err.message || 'Face verification failed');
+      }
+    } finally {
+      setIsVerifying(false);
     }
-    
-    setIsVerifying(false);
-  }, [modelsLoaded, onVerificationSuccess]);
+  }, [cameraActive, captureImage, onVerificationSuccess, onError]);
 
   useEffect(() => {
-    loadModels();
+    // Cleanup on unmount
     return () => {
       stopCamera();
-      // Store the current interval value to avoid stale closure
-      const currentInterval = intervalRef.current;
-      if (currentInterval) {
-        clearInterval(currentInterval);
-        intervalRef.current = null;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
-  }, [loadModels, stopCamera]);
+  }, [stopCamera]);
 
   const startVerification = useCallback(() => {
-    setCountdown(3);
-    setVerificationResult(null);
+    if (!cameraActive) return;
     
-    const countdownInterval = setInterval(() => {
+    setCountdown(3);
+    intervalRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) {
-          clearInterval(countdownInterval);
+          clearInterval(intervalRef.current);
           performVerification();
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-  }, [performVerification]);
+  }, [cameraActive, performVerification]);
 
   const resetVerification = useCallback(() => {
     setVerificationResult(null);
@@ -207,7 +204,7 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{
           borderColor: 'var(--primary-600)'
         }}></div>
-        <p style={{ color: 'var(--text-secondary)' }}>Loading face recognition models...</p>
+        <p style={{ color: 'var(--text-secondary)' }}>Initializing face verification...</p>
       </div>
     );
   }
@@ -295,7 +292,6 @@ const FaceVerification = ({ onVerificationSuccess, onError }) => {
         {!cameraActive ? (
           <button
             onClick={startCamera}
-            disabled={!modelsLoaded}
             className="btn btn-primary"
           >
             Start Camera

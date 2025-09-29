@@ -58,6 +58,28 @@ class DatabaseAdapter {
     }
   }
 
+  async get(query, params = []) {
+    if (this.dbType === 'mysql') {
+      if (!this.mysqlPool) await this.initialize();
+      const [rows] = await this.mysqlPool.execute(query, params);
+      return rows[0] || null;
+    } else {
+      if (!this.sqliteDb) await this.initialize();
+      return await this.sqliteDb.get(query, params);
+    }
+  }
+
+  async all(query, params = []) {
+    if (this.dbType === 'mysql') {
+      if (!this.mysqlPool) await this.initialize();
+      const [rows] = await this.mysqlPool.execute(query, params);
+      return rows;
+    } else {
+      if (!this.sqliteDb) await this.initialize();
+      return await this.sqliteDb.all(query, params);
+    }
+  }
+
   async close() {
     if (this.dbType === 'mysql' && this.mysqlPool) {
       await this.mysqlPool.end();

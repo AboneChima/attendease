@@ -35,8 +35,8 @@ async function testFaceMatching() {
       distance = Math.sqrt(distance);
       
       console.log(`Distance between ${encodings[0].name} and ${encodings[1].name}: ${distance.toFixed(4)}`);
-      console.log(`Threshold: 0.6`);
-      console.log(`Would match: ${distance < 0.6 ? 'YES' : 'NO'}`);
+      console.log(`Threshold: 3.5`);
+      console.log(`Would match: ${distance < 3.5 ? 'YES' : 'NO'}`);
       console.log('');
     }
 
@@ -46,7 +46,7 @@ async function testFaceMatching() {
       console.log('Testing David\'s face against all encodings:');
       const davidDescriptor = JSON.parse(davidEncoding.face_descriptor);
       
-      const threshold = 0.6;
+      const threshold = 3.5;
       let bestMatch = null;
       let bestDistance = Infinity;
 

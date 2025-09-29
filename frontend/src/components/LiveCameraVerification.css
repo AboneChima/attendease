@@ -1,0 +1,531 @@
+.live-camera-verification {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.verification-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.verification-header h2 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 2rem;
+}
+
+.verification-header p {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+}
+
+.verification-container {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+/* Student ID Section */
+.student-id-section {
+  margin-bottom: 25px;
+}
+
+.student-id-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.student-id-section input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.student-id-section input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.student-id-section input:disabled {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+/* Camera Section */
+.camera-section {
+  text-align: center;
+  margin-bottom: 25px;
+  background: #f8f9fa;
+  border-radius: 16px;
+  padding: 30px;
+  border: 1px solid #e9ecef;
+}
+
+.camera-placeholder {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border: 2px dashed #adb5bd;
+  border-radius: 16px;
+  padding: 50px 30px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.camera-placeholder:hover {
+  border-color: #6c757d;
+  background: linear-gradient(135deg, #e9ecef, #dee2e6);
+}
+
+.camera-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+  opacity: 0.7;
+  color: #495057;
+}
+
+.camera-placeholder p {
+  color: #495057;
+  margin-bottom: 25px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.start-camera-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.start-camera-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.start-camera-btn:disabled {
+  background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Camera Active */
+.camera-active {
+  text-align: center;
+}
+
+.video-container {
+  position: relative;
+  display: inline-block;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  margin-bottom: 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 4px;
+}
+
+.camera-video {
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  background: #000;
+  min-height: 400px;
+  object-fit: cover;
+}
+
+.camera-video-hidden {
+  display: none !important;
+}
+
+.camera-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 15px;
+}
+
+/* Video Status Indicator */
+.video-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.video-status.ready {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.video-status.loading {
+  background-color: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.status-ready, .status-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Button Container */
+.camera-controls .button-container {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.capture-btn {
+  background: linear-gradient(135deg, #00b894, #00a085);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.capture-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00a085, #00b894);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 184, 148, 0.4);
+}
+
+.stop-camera-btn {
+  background: linear-gradient(135deg, #fd79a8, #e84393);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(253, 121, 168, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stop-camera-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e84393, #fd79a8);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(253, 121, 168, 0.4);
+}
+
+/* Captured Image Section */
+.captured-image-section {
+  text-align: center;
+  margin-bottom: 25px;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.captured-image-section h4 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.captured-image {
+  max-width: 300px;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.verify-btn {
+  background: linear-gradient(135deg, #8e44ad, #7d3c98);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.verify-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7d3c98, #6c3483);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(142, 68, 173, 0.3);
+}
+
+.verify-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Action Buttons */
+.action-buttons {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.reset-btn {
+  background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.reset-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7f8c8d, #6c7b7d);
+  transform: translateY(-2px);
+}
+
+.reset-camera-btn {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+}
+
+.reset-camera-btn:hover {
+  background: linear-gradient(135deg, #c82333, #bd2130);
+  transform: translateY(-2px);
+}
+
+.reset-camera-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Results */
+.error-message {
+  background-color: #fdf2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.error-message h4 {
+  color: #dc2626;
+  margin-bottom: 10px;
+}
+
+.error-message p {
+  color: #7f1d1d;
+  margin: 0;
+}
+
+.verification-result {
+  border-radius: 8px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.verification-result.success {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.verification-result.failed {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.verification-success h4 {
+  color: #16a34a;
+  margin-bottom: 15px;
+}
+
+.verification-failed h4 {
+  color: #dc2626;
+  margin-bottom: 15px;
+}
+
+.student-info {
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 15px;
+  border-radius: 6px;
+  margin: 15px 0;
+}
+
+.student-info p {
+  margin: 5px 0;
+  color: #374151;
+}
+
+.attendance-marked {
+  color: #16a34a !important;
+  font-weight: 600;
+}
+
+.success-message {
+  color: #15803d;
+  font-weight: 500;
+  margin-top: 10px;
+}
+
+.retry-hint {
+  color: #7f1d1d;
+  font-style: italic;
+  margin-top: 10px;
+}
+
+/* Instructions */
+.verification-instructions {
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.verification-instructions h3 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 10px;
+}
+
+.verification-instructions ol {
+  padding-left: 20px;
+  margin-bottom: 25px;
+}
+
+.verification-instructions li {
+  margin-bottom: 8px;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+.tips {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #f39c12;
+}
+
+.tips h4 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.tips ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.tips li {
+  margin-bottom: 6px;
+  color: #4a5568;
+  line-height: 1.4;
+}
+
+.troubleshooting {
+  background-color: #fff3cd;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #ffc107;
+  margin-top: 20px;
+}
+
+.troubleshooting h4 {
+  color: #856404;
+  margin-bottom: 15px;
+}
+
+.troubleshooting ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.troubleshooting li {
+  margin-bottom: 8px;
+  color: #6c5700;
+  line-height: 1.5;
+}
+
+.troubleshooting strong {
+  color: #495057;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .live-camera-verification {
+    padding: 15px;
+  }
+  
+  .verification-container {
+    padding: 20px;
+  }
+  
+  .verification-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .camera-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .camera-controls button {
+    width: 100%;
+    max-width: 200px;
+  }
+  
+  .captured-image {
+    max-width: 250px;
+  }
+}
+
+@media (max-width: 480px) {
+  .verification-instructions {
+    padding: 20px;
+  }
+  
+  .tips {
+    padding: 15px;
+  }
+}

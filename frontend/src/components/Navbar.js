@@ -134,6 +134,20 @@ const Navbar = () => {
                   <Fingerprint size={14} />
                   <span className="font-medium">Enroll</span>
                 </Link>
+                <Link
+                  to="/verify-live"
+                  className={`nav-link flex items-center space-x-1 px-3 py-2 rounded-lg transition-all duration-300 hover:scale-105 text-sm ${
+                    isActivePath('/verify-live') ? 'nav-link-active' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isActivePath('/verify-live') ? 'var(--primary-100)' : 'transparent',
+                    color: isActivePath('/verify-live') ? 'var(--primary-700)' : 'var(--text-primary)',
+                    border: isActivePath('/verify-live') ? '1px solid var(--primary-200)' : '1px solid transparent'
+                  }}
+                >
+                  <QrCode size={14} />
+                  <span className="font-medium">Verify</span>
+                </Link>
               </>
             ) : (
               <>

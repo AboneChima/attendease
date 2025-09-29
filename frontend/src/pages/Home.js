@@ -94,49 +94,17 @@ const Home = () => {
                   </span>
                 </button>
                 <button
-                  onClick={() => navigate('/enroll-face')}
-                  className="group border-2 px-6 py-3 text-lg font-bold rounded-2xl hover:shadow-lg transition-all duration-500 hover-lift transform hover:scale-105 focus:outline-none"
+                  onClick={() => navigate('/enroll-photo')}
+                  className="group px-6 py-3 text-lg font-bold rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover-lift transform hover:scale-105 focus:outline-none"
                   style={{
-                    borderColor: 'var(--success-500)',
-                    color: 'var(--success-600)',
-                    backgroundColor: 'transparent',
+                    background: 'linear-gradient(135deg, var(--success-500), var(--success-600))',
+                    color: 'white',
                     outline: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = 'var(--success-500)';
-                    e.target.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'transparent';
-                    e.target.style.color = 'var(--success-600)';
                   }}
                 >
                   <span className="flex items-center justify-center gap-2">
-                    👤
-                    Enroll Face
-                  </span>
-                </button>
-                <button
-                  onClick={() => navigate('/scan')}
-                  className="group border-2 px-6 py-3 text-lg font-bold rounded-2xl hover:shadow-lg transition-all duration-500 hover-lift transform hover:scale-105 focus:outline-none"
-                  style={{
-                    borderColor: 'var(--primary-500)',
-                    color: 'var(--primary-600)',
-                    backgroundColor: 'transparent',
-                    outline: 'none'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.backgroundColor = 'var(--primary-500)';
-                    e.target.style.color = 'white';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.backgroundColor = 'transparent';
-                    e.target.style.color = 'var(--primary-600)';
-                  }}
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    <QrCode className="w-5 h-5" />
-                    Scan QR Code
+                    📸
+                    Photo Enrollment
                   </span>
                 </button>
               </div>

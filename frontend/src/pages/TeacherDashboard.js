@@ -6,6 +6,7 @@ import API_BASE_URL from '../config/api';
 const TeacherDashboard = () => {
   const [todayAttendance, setTodayAttendance] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [enrollmentData, setEnrollmentData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -20,13 +21,19 @@ const TeacherDashboard = () => {
         'Authorization': `Bearer ${token}`
       };
 
-      // Fetch today's attendance
-      const todayResponse = await axios.get(`${API_BASE_URL}/attendance/today`, { headers });
-      setTodayAttendance(todayResponse.data.attendance);
+      const today = new Date().toISOString().split('T')[0];
 
-      // Fetch summary data
+      // Fetch today's attendance from attendance-management (real-time status)
+      const todayResponse = await axios.get(`${API_BASE_URL}/attendance-management/daily/${today}`, { headers });
+      setTodayAttendance(todayResponse.data.students || []);
+
+      // Fetch summary data from attendance-management
       const summaryResponse = await axios.get(`${API_BASE_URL}/attendance/summary`, { headers });
       setSummary(summaryResponse.data);
+
+      // Fetch enrollment status data
+      const enrollmentResponse = await axios.get(`${API_BASE_URL}/enrollment-status/students`, { headers });
+      setEnrollmentData(enrollmentResponse.data);
 
     } catch (error) {
       console.error('Dashboard error:', error);
@@ -141,7 +148,7 @@ const TeacherDashboard = () => {
             }}></div>
             <div className="relative z-10 text-center">
               <span className="text-4xl block mb-4 animate-bounce-in animate-delay-300">📅</span>
-              <h3 className="text-3xl font-bold mb-2 animate-scale-in animate-delay-400">{todayAttendance.length}</h3>
+              <h3 className="text-3xl font-bold mb-2 animate-scale-in animate-delay-400">{todayAttendance.filter(record => record.status === 'present').length}</h3>
               <p className="opacity-90 animate-fade-in-up animate-delay-500">Today's Attendance</p>
             </div>
           </div>
@@ -189,6 +196,173 @@ const TeacherDashboard = () => {
           </div>
         </div>
 
+        {/* Enrollment Status Section */}
+        {enrollmentData && (
+          <div className="card p-8 mb-10 animate-fade-in-up animate-delay-600">
+            <div className="flex items-center mb-6">
+              <div className="w-12 h-12 rounded-full flex items-center justify-center mr-4 animate-bounce-in animate-delay-700" style={{
+                backgroundColor: 'var(--info-600)',
+                color: '#ffffff',
+                boxShadow: 'var(--shadow-md)',
+                border: '2px solid var(--info-700)'
+              }}>
+                <span className="text-2xl">🔐</span>
+              </div>
+              <h2 className="text-2xl font-semibold animate-fade-in-left animate-delay-700" style={{ color: 'var(--text-primary)' }}>
+                Student Enrollment Status
+              </h2>
+            </div>
+
+            {/* Enrollment Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="rounded-lg p-4 text-center" style={{
+                backgroundColor: 'var(--success-100)',
+                border: '1px solid var(--success-300)'
+              }}>
+                <div className="text-2xl font-bold mb-1" style={{ color: 'var(--success-700)' }}>
+                  {enrollmentData.summary?.enrolled_face || 0}
+                </div>
+                <div className="text-sm" style={{ color: 'var(--success-600)' }}>📱 Face Enrolled</div>
+              </div>
+              
+              <div className="rounded-lg p-4 text-center" style={{
+                backgroundColor: 'var(--warning-100)',
+                border: '1px solid var(--warning-300)'
+              }}>
+                <div className="text-2xl font-bold mb-1" style={{ color: 'var(--warning-700)' }}>
+                  {enrollmentData.summary?.enrolled_fingerprint || 0}
+                </div>
+                <div className="text-sm" style={{ color: 'var(--warning-600)' }}>👆 Fingerprint Enrolled</div>
+              </div>
+              
+              <div className="rounded-lg p-4 text-center" style={{
+                backgroundColor: 'var(--info-100)',
+                border: '1px solid var(--info-300)'
+              }}>
+                <div className="text-2xl font-bold mb-1" style={{ color: 'var(--info-700)' }}>
+                  {enrollmentData.summary?.enrolled_pin || 0}
+                </div>
+                <div className="text-sm" style={{ color: 'var(--info-600)' }}>🔢 PIN Enrolled</div>
+              </div>
+              
+              <div className="rounded-lg p-4 text-center" style={{
+                backgroundColor: 'var(--primary-100)',
+                border: '1px solid var(--primary-300)'
+              }}>
+                <div className="text-2xl font-bold mb-1" style={{ color: 'var(--primary-700)' }}>
+                  {enrollmentData.summary?.fully_enrolled || 0}
+                </div>
+                <div className="text-sm" style={{ color: 'var(--primary-600)' }}>✅ Fully Enrolled</div>
+              </div>
+            </div>
+
+            {/* Students List */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderBottom: '1px solid var(--border-secondary)'
+                  }}>
+                    <th className="text-left py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Student ID</th>
+                    <th className="text-left py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Name</th>
+                    <th className="text-center py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>📱 Face</th>
+                    <th className="text-center py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>👆 Fingerprint</th>
+                    <th className="text-center py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>🔢 PIN</th>
+                    <th className="text-center py-3 px-4 font-semibold" style={{ color: 'var(--text-primary)' }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enrollmentData.students?.map((student, index) => (
+                    <tr key={student.student_id} className="hover-lift transition-colors" style={{
+                      borderBottom: '1px solid var(--border-primary)',
+                      backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
+                    }}>
+                      <td className="py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {student.student_id}
+                      </td>
+                      <td className="py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>
+                        {student.student_name}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          student.face_enrolled 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {student.face_enrolled ? '✅' : '❌'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          student.fingerprint_enrolled 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {student.fingerprint_enrolled ? '✅' : '❌'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          student.pin_enrolled 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {student.pin_enrolled ? '✅' : '❌'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                          student.face_enrolled && student.fingerprint_enrolled && student.pin_enrolled
+                            ? 'bg-green-100 text-green-800'
+                            : student.face_enrolled || student.fingerprint_enrolled || student.pin_enrolled
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {student.face_enrolled && student.fingerprint_enrolled && student.pin_enrolled
+                            ? 'Complete'
+                            : student.face_enrolled || student.fingerprint_enrolled || student.pin_enrolled
+                            ? 'Partial'
+                            : 'None'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Special highlight for STU06 if requested */}
+            {enrollmentData.students?.find(s => s.student_id === 'STU06') && (
+              <div className="mt-6 p-4 rounded-lg" style={{
+                backgroundColor: 'var(--info-50)',
+                border: '2px solid var(--info-300)'
+              }}>
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">🔍</span>
+                  <div>
+                    <h4 className="font-semibold" style={{ color: 'var(--info-700)' }}>
+                      STU06 Status Check
+                    </h4>
+                    <p style={{ color: 'var(--info-600)' }}>
+                      {(() => {
+                        const stu06 = enrollmentData.students.find(s => s.student_id === 'STU06');
+                        return `${stu06.student_name} is enrolled via: ${
+                          [
+                            stu06.face_enrolled && 'Face Recognition',
+                            stu06.fingerprint_enrolled && 'Fingerprint',
+                            stu06.pin_enrolled && 'PIN'
+                          ].filter(Boolean).join(', ') || 'No enrollment methods'
+                        }`;
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Today's Attendance */}
           <div className="lg:col-span-2">
@@ -224,8 +398,8 @@ const TeacherDashboard = () => {
                     }}>
                       <span className="text-6xl">📅</span>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2 animate-fade-in-up animate-delay-1000" style={{ color: 'var(--text-primary)' }}>No attendance recorded today</h3>
-                    <p className="animate-fade-in-up animate-delay-1100" style={{ color: 'var(--text-secondary)' }}>Students will appear here once they scan their QR codes</p>
+                    <h3 className="text-xl font-semibold mb-2 animate-fade-in-up animate-delay-1000" style={{ color: 'var(--text-primary)' }}>No students registered</h3>
+                    <p className="animate-fade-in-up animate-delay-1100" style={{ color: 'var(--text-secondary)' }}>Please register students first</p>
                   </div>
                 ) : (
                   <div className="overflow-x-auto animate-fade-in-up animate-delay-800">
@@ -243,20 +417,27 @@ const TeacherDashboard = () => {
                       </thead>
                       <tbody>
                         {todayAttendance.map((record, index) => (
-                          <tr key={record.id} className="hover-lift transition-colors" style={{
+                          <tr key={record.student_id} className="hover-lift transition-colors" style={{
                             borderBottom: '1px solid var(--border-primary)',
                             backgroundColor: index % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)'
                           }}>
                             <td className="py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>{record.student_id}</td>
                             <td className="py-3 px-4 font-medium" style={{ color: 'var(--text-primary)' }}>{record.student_name}</td>
-                            <td className="py-3 px-4 font-medium" style={{ color: 'var(--primary-600)' }}>{formatTime(record.time)}</td>
+                            <td className="py-3 px-4 font-medium" style={{ color: 'var(--primary-600)' }}>
+                              {record.check_in_time ? formatTime(record.check_in_time) : '-'}
+                            </td>
                             <td className="py-3 px-4">
-                              <span className="px-3 py-1 rounded-full text-sm font-semibold flex items-center w-fit" style={{
-                                backgroundColor: 'var(--success-100)',
-                                color: 'var(--success-800)'
-                              }}>
-                                <span className="mr-1">✅</span>
-                                Present
+                              <span className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center w-fit ${
+                                record.status === 'present' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : record.status === 'absent'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                <span className="mr-1">
+                                  {record.status === 'present' ? '✅' : record.status === 'absent' ? '❌' : '⏳'}
+                                </span>
+                                {record.status === 'present' ? 'Present' : record.status === 'absent' ? 'Absent' : 'Not Yet Here'}
                               </span>
                             </td>
                           </tr>

@@ -12,8 +12,13 @@ import AttendanceManagement from './pages/AttendanceManagement';
 import AdminDashboard from './components/AdminDashboard';
 import StudentManagement from './components/StudentManagement';
 import StudentFaceEnrollment from './components/StudentFaceEnrollment';
+import PhotoFaceEnrollment from './components/PhotoFaceEnrollment';
+import PhotoFaceVerification from './components/PhotoFaceVerification';
+import LiveCameraVerification from './components/LiveCameraVerification';
 import FingerprintEnrollmentPage from './pages/FingerprintEnrollmentPage';
 import BiometricEnrollmentPage from './pages/BiometricEnrollmentPage';
+import EnhancedFaceEnrollmentPage from './pages/EnhancedFaceEnrollmentPage';
+import DebugTest from './components/DebugTest';
 import './styles/theme.css';
 
 // Check if user is authenticated
@@ -41,8 +46,13 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/register" element={<StudentRegistration />} />
               <Route path="/enroll-face" element={<StudentFaceEnrollment />} />
+              <Route path="/enroll-face-enhanced" element={<EnhancedFaceEnrollmentPage />} />
+              <Route path="/enroll-photo" element={<PhotoFaceEnrollment />} />
+            <Route path="/verify-photo" element={<PhotoFaceVerification />} />
+            <Route path="/verify-live" element={<LiveCameraVerification />} />
               <Route path="/enroll-fingerprint" element={<FingerprintEnrollmentPage />} />
               <Route path="/biometric-enrollment" element={<BiometricEnrollmentPage />} />
+              <Route path="/debug-test" element={<DebugTest />} />
               <Route path="/qr-attendance" element={<QRScanner />} />
               <Route path="/biometric-attendance" element={<QRScanner />} />
               <Route path="/scan" element={<QRScanner />} />

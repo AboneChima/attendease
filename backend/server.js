@@ -13,6 +13,9 @@ const studentRoutes = require('./routes/students');
 const teacherRoutes = require('./routes/teachers');
 const attendanceRoutes = require('./routes/attendance');
 const attendanceManagementRoutes = require('./routes/attendance-management');
+const enhancedFaceEnrollmentRoutes = require('./routes/enhancedFaceEnrollment');
+const enhancedFaceVerificationRoutes = require('./routes/enhancedFaceVerification');
+const enrollmentStatusRoutes = require('./routes/enrollment-status');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +33,9 @@ app.use('/api/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/attendance-management', attendanceManagementRoutes);
+app.use('/api/face/enrollment', enhancedFaceEnrollmentRoutes);
+app.use('/api/face/verification', enhancedFaceVerificationRoutes);
+app.use('/api/enrollment-status', enrollmentStatusRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
