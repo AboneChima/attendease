@@ -83,26 +83,26 @@ const TeacherDashboard = () => {
           background: 'linear-gradient(135deg, var(--primary-600), var(--primary-800))',
           color: '#ffffff'
         }}>
-          <div className="absolute top-0 right-0 w-48 h-48 rounded-full transform translate-x-24 -translate-y-24" style={{
+          <div className="absolute top-0 right-0 w-32 h-32 md:w-48 md:h-48 rounded-full transform translate-x-16 md:translate-x-24 -translate-y-16 md:-translate-y-24" style={{
             backgroundColor: 'rgba(255, 255, 255, 0.1)'
           }}></div>
-          <div className="relative z-10 p-8">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mr-6 text-2xl font-bold animate-bounce-in animate-delay-300 shadow-lg" style={{
+          <div className="relative z-10 p-4 md:p-8">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4 md:mb-6 space-y-4 md:space-y-0">
+              <div className="flex items-center w-full md:w-auto">
+                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full flex items-center justify-center mr-4 md:mr-6 text-lg md:text-2xl font-bold animate-bounce-in animate-delay-300 shadow-lg flex-shrink-0" style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.9)',
                   color: 'var(--primary-700)',
-                  border: '3px solid rgba(255, 255, 255, 0.3)'
+                  border: '2px md:border-3 solid rgba(255, 255, 255, 0.3)'
                 }}>
                   {teacher.name?.charAt(0) || 'T'}
                 </div>
-                <div>
-                  <h1 className="text-4xl font-bold mb-2 flex items-center animate-fade-in-left animate-delay-400">
-                    Welcome back, {teacher.name}! <span className="ml-3 text-3xl">👋</span>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl md:text-3xl lg:text-4xl font-bold mb-1 md:mb-2 flex items-center animate-fade-in-left animate-delay-400 truncate">
+                    Welcome back, {teacher.name?.split(' ')[0] || 'Teacher'}! <span className="ml-2 text-lg md:text-3xl">👋</span>
                   </h1>
                   <div className="flex items-center opacity-90 animate-fade-in-left animate-delay-500">
-                    <span className="mr-2 text-lg">📅</span>
-                    <p className="text-xl">
+                    <span className="mr-2 text-sm md:text-lg">📅</span>
+                    <p className="text-sm md:text-xl truncate">
                       {new Date().toLocaleDateString('en-US', { 
                         weekday: 'long', 
                         year: 'numeric', 
@@ -114,9 +114,9 @@ const TeacherDashboard = () => {
                 </div>
               </div>
               
-              <div className="text-center animate-fade-in-right animate-delay-600">
-                <span className="text-5xl block opacity-80 mb-2">📊</span>
-                <p className="opacity-80">Dashboard</p>
+              <div className="text-center animate-fade-in-right animate-delay-600 self-center md:self-auto">
+                <span className="text-3xl md:text-5xl block opacity-80 mb-1 md:mb-2">📊</span>
+                <p className="opacity-80 text-sm md:text-base">Dashboard</p>
               </div>
             </div>
           </div>

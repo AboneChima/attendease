@@ -282,8 +282,8 @@ const Navbar = () => {
             {/* Navigation Items */}
             {isAuthenticated ? (
               <>
-                {/* Authenticated Navigation */}
-                {[...navItems, ...teacherNavItems].map((item) => {
+                {/* Authenticated Navigation - Only show teacher navigation items */}
+                {teacherNavItems.map((item) => {
                   const IconComponent = item.icon;
                   return (
                     <Link
@@ -332,28 +332,67 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                {/* Non-authenticated Navigation */}
-                {navItems.map((item) => {
-                  const IconComponent = item.icon;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={closeMobileMenu}
-                      className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
-                        isActivePath(item.path) ? 'font-semibold' : ''
-                      }`}
-                      style={{
-                        backgroundColor: isActivePath(item.path) ? 'var(--primary-100)' : 'transparent',
-                        color: isActivePath(item.path) ? 'var(--primary-700)' : 'var(--text-primary)',
-                        border: isActivePath(item.path) ? '1px solid var(--primary-200)' : '1px solid transparent'
-                      }}
-                    >
-                      <IconComponent size={18} />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
+                {/* Non-authenticated Navigation - Match desktop navigation */}
+                <Link
+                  to="/"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActivePath('/') ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isActivePath('/') ? 'var(--primary-100)' : 'transparent',
+                    color: isActivePath('/') ? 'var(--primary-700)' : 'var(--text-primary)',
+                    border: isActivePath('/') ? '1px solid var(--primary-200)' : '1px solid transparent'
+                  }}
+                >
+                  <Home size={18} />
+                  <span>Home</span>
+                </Link>
+                <Link
+                  to="/qr-attendance"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActivePath('/qr-attendance') ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isActivePath('/qr-attendance') ? 'var(--primary-100)' : 'transparent',
+                    color: isActivePath('/qr-attendance') ? 'var(--primary-700)' : 'var(--text-primary)',
+                    border: isActivePath('/qr-attendance') ? '1px solid var(--primary-200)' : '1px solid transparent'
+                  }}
+                >
+                  <QrCode size={18} />
+                  <span>Attendance</span>
+                </Link>
+                <Link
+                  to="/biometric-enrollment"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActivePath('/biometric-enrollment') ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isActivePath('/biometric-enrollment') ? 'var(--primary-100)' : 'transparent',
+                    color: isActivePath('/biometric-enrollment') ? 'var(--primary-700)' : 'var(--text-primary)',
+                    border: isActivePath('/biometric-enrollment') ? '1px solid var(--primary-200)' : '1px solid transparent'
+                  }}
+                >
+                  <Fingerprint size={18} />
+                  <span>Enroll</span>
+                </Link>
+                <Link
+                  to="/verify-live"
+                  onClick={closeMobileMenu}
+                  className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
+                    isActivePath('/verify-live') ? 'font-semibold' : ''
+                  }`}
+                  style={{
+                    backgroundColor: isActivePath('/verify-live') ? 'var(--primary-100)' : 'transparent',
+                    color: isActivePath('/verify-live') ? 'var(--primary-700)' : 'var(--text-primary)',
+                    border: isActivePath('/verify-live') ? '1px solid var(--primary-200)' : '1px solid transparent'
+                  }}
+                >
+                  <QrCode size={18} />
+                  <span>Verify</span>
+                </Link>
                 
                 {/* Login Button */}
                 <div className="pt-3 mt-3" style={{
