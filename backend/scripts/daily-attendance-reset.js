@@ -50,27 +50,60 @@ const performDailyReset = async () => {
           console.error('❌ Error calculating yesterday\'s summary:', err.message);
           reject(err);
         } else if (summary && summary.total_students > 0) {
-          // Insert summary into attendance_history
-          const insertHistoryQuery = `
-            INSERT OR REPLACE INTO attendance_history (
-              date, total_students, present_count, absent_count, attendance_rate
-            ) VALUES (?, ?, ?, ?, ?)
+          // Insert summary into attendance_history (PostgreSQL compatible)
+          const checkHistoryQuery = `
+            SELECT id FROM attendance_history WHERE date = ?
           `;
           
-          db.run(insertHistoryQuery, [
-            yesterday,
-            summary.total_students,
-            summary.present_count,
-            summary.absent_count,
-            summary.attendance_rate
-          ], function(err) {
+          db.get(checkHistoryQuery, [yesterday], function(err, existingRecord) {
             if (err) {
-              console.error('❌ Error saving attendance history:', err.message);
+              console.error('❌ Error checking attendance history:', err.message);
               reject(err);
-            } else {
-              console.log(`✅ Saved attendance summary for ${yesterday} (${summary.present_count}/${summary.total_students} present, ${summary.attendance_rate}% rate)`);
-              resolve();
+              return;
             }
+            
+            let historyQuery;
+            let historyParams;
+            
+            if (existingRecord) {
+              // Update existing record
+              historyQuery = `
+                UPDATE attendance_history 
+                SET total_students = ?, present_count = ?, absent_count = ?, attendance_rate = ?
+                WHERE date = ?
+              `;
+              historyParams = [
+                summary.total_students,
+                summary.present_count,
+                summary.absent_count,
+                summary.attendance_rate,
+                yesterday
+              ];
+            } else {
+              // Insert new record
+              historyQuery = `
+                INSERT INTO attendance_history (
+                  date, total_students, present_count, absent_count, attendance_rate
+                ) VALUES (?, ?, ?, ?, ?)
+              `;
+              historyParams = [
+                yesterday,
+                summary.total_students,
+                summary.present_count,
+                summary.absent_count,
+                summary.attendance_rate
+              ];
+            }
+          
+            db.run(historyQuery, historyParams, function(err) {
+              if (err) {
+                console.error('❌ Error saving attendance history:', err.message);
+                reject(err);
+              } else {
+                console.log(`✅ Saved attendance summary for ${yesterday} (${summary.present_count}/${summary.total_students} present, ${summary.attendance_rate}% rate)`);
+                resolve();
+              }
+            });
           });
         } else {
           console.log(`ℹ️ No attendance data found for ${yesterday}`);
