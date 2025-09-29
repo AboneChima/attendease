@@ -57,8 +57,17 @@ class DatabaseAdapter {
       // Handle different query types
       if (query.startsWith('SELECT')) {
         return [result.rows]; // Return in MySQL format [rows, fields]
-      } else if (query.startsWith('INSERT') || query.startsWith('UPDATE') || query.startsWith('DELETE')) {
-        return [{ insertId: result.rows[0]?.id || null, affectedRows: result.rowCount }];
+      } else if (query.startsWith('INSERT')) {
+        // For INSERT queries, we need to add RETURNING id if not already present
+        if (!pgQuery.includes('RETURNING')) {
+          pgQuery = pgQuery.replace(/;?\s*$/, ' RETURNING id;');
+          const insertResult = await this.postgresPool.query(pgQuery, pgParams);
+          return [{ insertId: insertResult.rows[0]?.id || null, affectedRows: insertResult.rowCount }];
+        } else {
+          return [{ insertId: result.rows[0]?.id || null, affectedRows: result.rowCount }];
+        }
+      } else if (query.startsWith('UPDATE') || query.startsWith('DELETE')) {
+        return [{ insertId: null, affectedRows: result.rowCount }];
       }
       
       return [result.rows];
