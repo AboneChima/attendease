@@ -16,6 +16,7 @@ const attendanceManagementRoutes = require('./routes/attendance-management');
 const enhancedFaceEnrollmentRoutes = require('./routes/enhancedFaceEnrollment');
 const enhancedFaceVerificationRoutes = require('./routes/enhancedFaceVerification');
 const enrollmentStatusRoutes = require('./routes/enrollment-status');
+const databaseInitRoutes = require('./routes/database-init');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,6 +37,7 @@ app.use('/api/attendance-management', attendanceManagementRoutes);
 app.use('/api/face/enrollment', enhancedFaceEnrollmentRoutes);
 app.use('/api/face/verification', enhancedFaceVerificationRoutes);
 app.use('/api/enrollment-status', enrollmentStatusRoutes);
+app.use('/api/database', databaseInitRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
