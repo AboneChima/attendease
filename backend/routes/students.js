@@ -119,10 +119,20 @@ router.post('/register', [
 
     // Add the new student to today's daily attendance
     const today = new Date().toISOString().split('T')[0];
-    await dbAdapter.execute(
-      'INSERT OR IGNORE INTO daily_attendance (student_id, student_name, date, status) VALUES (?, ?, ?, ?)',
-      [student_id, name, today, 'not_yet_here']
+    
+    // Check if daily attendance record already exists
+    const [existingAttendance] = await dbAdapter.execute(
+      'SELECT id FROM daily_attendance WHERE student_id = ? AND date = ?',
+      [student_id, today]
     );
+    
+    // Only insert if record doesn't exist
+    if (existingAttendance.length === 0) {
+      await dbAdapter.execute(
+        'INSERT INTO daily_attendance (student_id, student_name, date, status) VALUES (?, ?, ?, ?)',
+        [student_id, name, today, 'not_yet_here']
+      );
+    }
 
     res.status(201).json({
       message: 'Student registered successfully',
