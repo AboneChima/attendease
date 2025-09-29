@@ -1,15 +1,30 @@
 const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 const { getDatabase } = require('./sqlite-database');
 
 class DatabaseAdapter {
   constructor() {
-    this.dbType = process.env.DB_TYPE || 'sqlite';
+    // Determine database type based on environment
+    if (process.env.DATABASE_URL) {
+      this.dbType = 'postgresql';
+    } else if (process.env.DB_HOST) {
+      this.dbType = 'mysql';
+    } else {
+      this.dbType = process.env.DB_TYPE || 'sqlite';
+    }
+    
     this.mysqlPool = null;
+    this.postgresPool = null;
     this.sqliteDb = null;
   }
 
   async initialize() {
-    if (this.dbType === 'mysql') {
+    if (this.dbType === 'postgresql') {
+      this.postgresPool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      });
+    } else if (this.dbType === 'mysql') {
       this.mysqlPool = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
         user: process.env.DB_USER || 'root',
@@ -25,7 +40,29 @@ class DatabaseAdapter {
   }
 
   async execute(query, params = []) {
-    if (this.dbType === 'mysql') {
+    if (this.dbType === 'postgresql') {
+      if (!this.postgresPool) await this.initialize();
+      
+      // Convert MySQL-style placeholders (?) to PostgreSQL-style ($1, $2, etc.)
+      let pgQuery = query;
+      let pgParams = params;
+      
+      if (params.length > 0) {
+        let paramIndex = 1;
+        pgQuery = query.replace(/\?/g, () => `$${paramIndex++}`);
+      }
+      
+      const result = await this.postgresPool.query(pgQuery, pgParams);
+      
+      // Handle different query types
+      if (query.startsWith('SELECT')) {
+        return [result.rows]; // Return in MySQL format [rows, fields]
+      } else if (query.startsWith('INSERT') || query.startsWith('UPDATE') || query.startsWith('DELETE')) {
+        return [{ insertId: result.rows[0]?.id || null, affectedRows: result.rowCount }];
+      }
+      
+      return [result.rows];
+    } else if (this.dbType === 'mysql') {
       if (!this.mysqlPool) await this.initialize();
       return await this.mysqlPool.execute(query, params);
     } else {
@@ -59,7 +96,19 @@ class DatabaseAdapter {
   }
 
   async get(query, params = []) {
-    if (this.dbType === 'mysql') {
+    if (this.dbType === 'postgresql') {
+      if (!this.postgresPool) await this.initialize();
+      
+      // Convert MySQL-style placeholders to PostgreSQL-style
+      let pgQuery = query;
+      if (params.length > 0) {
+        let paramIndex = 1;
+        pgQuery = query.replace(/\?/g, () => `$${paramIndex++}`);
+      }
+      
+      const result = await this.postgresPool.query(pgQuery, params);
+      return result.rows[0] || null;
+    } else if (this.dbType === 'mysql') {
       if (!this.mysqlPool) await this.initialize();
       const [rows] = await this.mysqlPool.execute(query, params);
       return rows[0] || null;
@@ -70,7 +119,19 @@ class DatabaseAdapter {
   }
 
   async all(query, params = []) {
-    if (this.dbType === 'mysql') {
+    if (this.dbType === 'postgresql') {
+      if (!this.postgresPool) await this.initialize();
+      
+      // Convert MySQL-style placeholders to PostgreSQL-style
+      let pgQuery = query;
+      if (params.length > 0) {
+        let paramIndex = 1;
+        pgQuery = query.replace(/\?/g, () => `$${paramIndex++}`);
+      }
+      
+      const result = await this.postgresPool.query(pgQuery, params);
+      return result.rows;
+    } else if (this.dbType === 'mysql') {
       if (!this.mysqlPool) await this.initialize();
       const [rows] = await this.mysqlPool.execute(query, params);
       return rows;
@@ -81,7 +142,9 @@ class DatabaseAdapter {
   }
 
   async close() {
-    if (this.dbType === 'mysql' && this.mysqlPool) {
+    if (this.dbType === 'postgresql' && this.postgresPool) {
+      await this.postgresPool.end();
+    } else if (this.dbType === 'mysql' && this.mysqlPool) {
       await this.mysqlPool.end();
     } else if (this.sqliteDb) {
       await this.sqliteDb.close();
