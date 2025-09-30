@@ -25,9 +25,26 @@ router.get('/students', async (req, res) => {
       });
     }
     
-    // Check if PIN field exists in students table
-    const [studentsColumns] = await dbAdapter.execute('PRAGMA table_info(students)');
-    const hasPinField = studentsColumns.some(col => col.name === 'pin');
+    // Check if PIN field exists in students table (PostgreSQL and SQLite compatible)
+    let hasPinField = false;
+    try {
+      // Try PostgreSQL approach first
+      const [pgColumns] = await dbAdapter.execute(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'students' AND column_name = 'pin'
+      `);
+      hasPinField = pgColumns.length > 0;
+    } catch (pgError) {
+      // Fallback to SQLite approach
+      try {
+        const [sqliteColumns] = await dbAdapter.execute('PRAGMA table_info(students)');
+        hasPinField = sqliteColumns.some(col => col.name === 'pin');
+      } catch (sqliteError) {
+        console.log('⚠️ Could not check for PIN field, assuming it does not exist');
+        hasPinField = false;
+      }
+    }
     
     // Prepare enrollment status for each student
     const studentsWithEnrollment = [];
