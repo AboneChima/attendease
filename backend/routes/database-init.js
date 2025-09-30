@@ -100,49 +100,114 @@ router.post('/fix-schema', async (req, res) => {
         const { dbAdapter } = require('../config/database-adapter');
         await dbAdapter.initialize();
         
-        // Use PostgreSQL's IF NOT EXISTS syntax to safely add the column
+        // First, check if the column already exists using PostgreSQL-specific query
+        let columnExists = false;
         try {
-            console.log('Attempting to execute: ALTER TABLE students ADD COLUMN IF NOT EXISTS qr_code TEXT');
-            const result = await dbAdapter.execute('ALTER TABLE students ADD COLUMN IF NOT EXISTS qr_code TEXT');
-            console.log('✅ ALTER TABLE result:', result);
-            console.log('✅ QR code column addition attempted');
-        } catch (error) {
-            console.log('❌ ALTER TABLE error:', error.message);
-            console.log('❌ Full error:', error);
-            throw error; // Re-throw the error to handle it properly
-        }
-        console.log('✅ QR code column added successfully');
-        
-        // Verify the column was actually added
-        try {
-            const [verifyResult] = await dbAdapter.execute('SELECT * FROM students LIMIT 1');
-            if (verifyResult.length > 0) {
-                const columnNames = Object.keys(verifyResult[0]);
-                console.log('✅ Verification - Current student columns:', columnNames);
-                console.log('✅ QR code column present:', columnNames.includes('qr_code'));
+            const [columns] = await dbAdapter.execute(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'students' AND column_name = 'qr_code'
+            `);
+            columnExists = columns.length > 0;
+            console.log('✅ Column existence check:', columnExists);
+        } catch (checkError) {
+            console.log('❌ Column check error (might be SQLite):', checkError.message);
+            // Fallback for SQLite - try to select from the column
+            try {
+                await dbAdapter.execute('SELECT qr_code FROM students LIMIT 1');
+                columnExists = true;
+                console.log('✅ Column exists (SQLite fallback check)');
+            } catch (fallbackError) {
+                columnExists = false;
+                console.log('✅ Column does not exist (SQLite fallback check)');
             }
-        } catch (verifyError) {
-            console.log('❌ Verification error:', verifyError.message);
+        }
+        
+        if (!columnExists) {
+            // Add the column using the appropriate syntax
+            try {
+                console.log('Attempting to add qr_code column...');
+                
+                // Try PostgreSQL syntax first
+                try {
+                    await dbAdapter.execute('ALTER TABLE students ADD COLUMN qr_code TEXT');
+                    console.log('✅ Column added using PostgreSQL syntax');
+                } catch (pgError) {
+                    console.log('PostgreSQL syntax failed, trying SQLite syntax...');
+                    await dbAdapter.execute('ALTER TABLE students ADD COLUMN qr_code TEXT');
+                    console.log('✅ Column added using SQLite syntax');
+                }
+                
+            } catch (alterError) {
+                console.log('❌ ALTER TABLE failed:', alterError.message);
+                throw alterError;
+            }
+        } else {
+            console.log('✅ QR code column already exists');
+        }
+        
+        // Verify the column was actually added by testing an INSERT
+        try {
+            console.log('🔍 Testing column functionality...');
+            const testId = `TEST_${Date.now()}`;
+            
+            // Try to insert a test record with qr_code
+            await dbAdapter.execute(
+                'INSERT INTO students (student_id, name, email, qr_code) VALUES (?, ?, ?, ?)',
+                [testId, 'Test Student', 'test@example.com', 'TEST_QR']
+            );
+            
+            // Verify the insert worked
+            const [testResult] = await dbAdapter.execute(
+                'SELECT qr_code FROM students WHERE student_id = ?',
+                [testId]
+            );
+            
+            if (testResult.length > 0 && testResult[0].qr_code === 'TEST_QR') {
+                console.log('✅ QR code column is functional');
+            } else {
+                throw new Error('QR code column test failed');
+            }
+            
+            // Clean up test record
+            await dbAdapter.execute('DELETE FROM students WHERE student_id = ?', [testId]);
+            console.log('✅ Test record cleaned up');
+            
+        } catch (testError) {
+            console.log('❌ Column functionality test failed:', testError.message);
+            throw new Error(`QR code column is not functional: ${testError.message}`);
         }
         
         // Update existing students with default QR codes
-        const [students] = await dbAdapter.execute('SELECT student_id FROM students WHERE qr_code IS NULL');
+        const [students] = await dbAdapter.execute('SELECT student_id, name FROM students WHERE qr_code IS NULL');
         console.log(`Updating ${students.length} students with QR codes...`);
         
+        let updatedCount = 0;
         for (const student of students) {
-            const qrData = `STUDENT:${student.student_id}`;
-            await dbAdapter.execute(
-                'UPDATE students SET qr_code = ? WHERE student_id = ?',
-                [qrData, student.student_id]
-            );
+            try {
+                const qrData = JSON.stringify({
+                    student_id: student.student_id,
+                    name: student.name,
+                    timestamp: Date.now()
+                });
+                
+                await dbAdapter.execute(
+                    'UPDATE students SET qr_code = ? WHERE student_id = ?',
+                    [qrData, student.student_id]
+                );
+                updatedCount++;
+            } catch (updateError) {
+                console.log(`❌ Failed to update student ${student.student_id}:`, updateError.message);
+            }
         }
         
-        console.log('✅ All students updated with QR codes');
+        console.log(`✅ ${updatedCount} students updated with QR codes`);
         
         res.json({
             success: true,
-            message: 'Schema fixed successfully - QR code column added',
-            students_updated: students.length,
+            message: 'Schema fixed successfully - QR code column is functional',
+            column_existed: columnExists,
+            students_updated: updatedCount,
             timestamp: new Date().toISOString()
         });
         
