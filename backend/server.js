@@ -1,6 +1,6 @@
 // AttendEase Backend Server
 // Comprehensive logging for deployment debugging
-// Deployment trigger: 2025-01-29 16:02 - Force redeploy
+// Deployment trigger: 2025-01-30 20:22 - Force redeploy with detailed error logging
 
 // Add comprehensive error handling and logging
 console.log('🚀 Starting AttendEase Backend Server...');
