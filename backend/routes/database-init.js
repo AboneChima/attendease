@@ -100,30 +100,16 @@ router.post('/fix-schema', async (req, res) => {
         const { dbAdapter } = require('../config/database-adapter');
         await dbAdapter.initialize();
         
-        // Try to add the column directly - if it exists, PostgreSQL will throw an error
+        // Use PostgreSQL's IF NOT EXISTS syntax to safely add the column
         try {
-            console.log('Attempting to execute: ALTER TABLE students ADD COLUMN qr_code TEXT');
-            const result = await dbAdapter.execute('ALTER TABLE students ADD COLUMN qr_code TEXT');
+            console.log('Attempting to execute: ALTER TABLE students ADD COLUMN IF NOT EXISTS qr_code TEXT');
+            const result = await dbAdapter.execute('ALTER TABLE students ADD COLUMN IF NOT EXISTS qr_code TEXT');
             console.log('✅ ALTER TABLE result:', result);
-            console.log('✅ QR code column added successfully');
+            console.log('✅ QR code column addition attempted');
         } catch (error) {
             console.log('❌ ALTER TABLE error:', error.message);
             console.log('❌ Full error:', error);
-            
-            if (error.message.includes('already exists') || 
-                error.message.includes('duplicate column') || 
-                error.message.includes('column "qr_code" of relation "students" already exists')) {
-                console.log('QR code column already exists (caught by error)');
-                res.json({
-                    success: true,
-                    message: 'QR code column already exists (error caught)',
-                    error_message: error.message,
-                    timestamp: new Date().toISOString()
-                });
-                return;
-            } else {
-                throw error; // Re-throw if it's a different error
-            }
+            throw error; // Re-throw the error to handle it properly
         }
         console.log('✅ QR code column added successfully');
         
