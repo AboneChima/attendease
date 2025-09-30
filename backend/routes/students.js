@@ -154,7 +154,7 @@ router.post('/register', [
 router.get('/', async (req, res) => {
   try {
     const [students] = await dbAdapter.execute(
-      'SELECT id, student_id, name, email, phone, created_at FROM students ORDER BY name ASC'
+      'SELECT id, student_id, name, email, phone, qr_code, created_at FROM students ORDER BY name ASC'
     );
     
     res.json(students);
