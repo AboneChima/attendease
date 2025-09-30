@@ -101,7 +101,10 @@ router.post('/register', [
       return res.status(400).json({ error: 'Student ID or email already exists' });
     }
 
+    console.log('🔄 Starting registration for student:', student_id);
+
     // Generate QR code data
+    console.log('📋 Generating QR code data...');
     const qrData = JSON.stringify({
       student_id,
       name,
@@ -109,29 +112,40 @@ router.post('/register', [
     });
 
     // Generate QR code as base64 string
+    console.log('🔍 Generating QR code...');
     const qrCode = await QRCode.toDataURL(qrData);
+    console.log('✅ QR code generated, length:', qrCode.length);
 
     // Insert student into database
+    console.log('💾 Inserting student into database...');
     await dbAdapter.execute(
       'INSERT INTO students (student_id, name, email, phone, qr_code) VALUES (?, ?, ?, ?, ?)',
       [student_id, name, email, phone || null, qrCode]
     );
+    console.log('✅ Student inserted successfully');
 
     // Add the new student to today's daily attendance
     const today = new Date().toISOString().split('T')[0];
+    console.log('📅 Adding to daily attendance for date:', today);
     
     // Check if daily attendance record already exists
+    console.log('🔍 Checking for existing daily attendance...');
     const [existingAttendance] = await dbAdapter.execute(
       'SELECT id FROM daily_attendance WHERE student_id = ? AND date = ?',
       [student_id, today]
     );
+    console.log('📊 Existing attendance records found:', existingAttendance.length);
     
     // Only insert if record doesn't exist
     if (existingAttendance.length === 0) {
+      console.log('💾 Inserting daily attendance record...');
       await dbAdapter.execute(
         'INSERT INTO daily_attendance (student_id, student_name, date, status) VALUES (?, ?, ?, ?)',
         [student_id, name, today, 'not_yet_here']
       );
+      console.log('✅ Daily attendance record inserted');
+    } else {
+      console.log('⚠️ Daily attendance record already exists, skipping');
     }
 
     res.status(201).json({
@@ -145,8 +159,32 @@ router.post('/register', [
       }
     });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Failed to register student' });
+    console.error('=== DETAILED REGISTRATION ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error stack:', error.stack);
+    console.error('Request body:', req.body);
+    console.error('=====================================');
+    
+    // Provide more specific error messages based on error type
+    let errorMessage = 'Failed to register student';
+    let statusCode = 500;
+    
+    if (error.message && error.message.includes('foreign key')) {
+      errorMessage = 'Database constraint error - foreign key violation';
+    } else if (error.message && error.message.includes('duplicate')) {
+      errorMessage = 'Student already exists';
+      statusCode = 400;
+    } else if (error.message && error.message.includes('qr_code')) {
+      errorMessage = 'QR code generation failed';
+    } else if (error.message && error.message.includes('daily_attendance')) {
+      errorMessage = 'Failed to create daily attendance record';
+    }
+    
+    res.status(statusCode).json({ 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
