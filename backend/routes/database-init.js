@@ -150,11 +150,12 @@ router.post('/fix-schema', async (req, res) => {
         try {
             console.log('🔍 Testing column functionality...');
             const testId = `TEST_${Date.now()}`;
+            const testEmail = `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`;
             
             // Try to insert a test record with qr_code
             await dbAdapter.execute(
                 'INSERT INTO students (student_id, name, email, qr_code) VALUES (?, ?, ?, ?)',
-                [testId, 'Test Student', 'test@example.com', 'TEST_QR']
+                [testId, 'Test Student', testEmail, 'TEST_QR']
             );
             
             // Verify the insert worked
