@@ -100,19 +100,25 @@ router.post('/fix-schema', async (req, res) => {
         const { dbAdapter } = require('../config/database-adapter');
         await dbAdapter.initialize();
         
-        // Check if qr_code column exists
-        try {
-            await dbAdapter.execute('SELECT qr_code FROM students LIMIT 1');
+        // Check if qr_code column exists using proper PostgreSQL method
+        const [columnCheck] = await dbAdapter.execute(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'students' 
+            AND column_name = 'qr_code'
+        `);
+        
+        if (columnCheck.length > 0) {
+            console.log('QR code column already exists');
             res.json({
                 success: true,
                 message: 'QR code column already exists',
                 timestamp: new Date().toISOString()
             });
             return;
-        } catch (error) {
-            // Column doesn't exist, add it
-            console.log('Adding missing qr_code column...');
         }
+        
+        console.log('QR code column missing, adding it...');
         
         // Add the missing qr_code column
         await dbAdapter.execute('ALTER TABLE students ADD COLUMN qr_code TEXT');
