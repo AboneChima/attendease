@@ -92,4 +92,63 @@ router.get('/status', async (req, res) => {
     }
 });
 
+// Emergency fix endpoint to add missing qr_code column
+router.post('/fix-schema', async (req, res) => {
+    try {
+        console.log('🔧 Emergency schema fix requested via API...');
+        
+        const { dbAdapter } = require('../config/database-adapter');
+        await dbAdapter.initialize();
+        
+        // Check if qr_code column exists
+        try {
+            await dbAdapter.execute('SELECT qr_code FROM students LIMIT 1');
+            res.json({
+                success: true,
+                message: 'QR code column already exists',
+                timestamp: new Date().toISOString()
+            });
+            return;
+        } catch (error) {
+            // Column doesn't exist, add it
+            console.log('Adding missing qr_code column...');
+        }
+        
+        // Add the missing qr_code column
+        await dbAdapter.execute('ALTER TABLE students ADD COLUMN qr_code TEXT');
+        console.log('✅ QR code column added successfully');
+        
+        // Update existing students with default QR codes
+        const [students] = await dbAdapter.execute('SELECT student_id FROM students WHERE qr_code IS NULL');
+        console.log(`Updating ${students.length} students with QR codes...`);
+        
+        for (const student of students) {
+            const qrData = `STUDENT:${student.student_id}`;
+            await dbAdapter.execute(
+                'UPDATE students SET qr_code = ? WHERE student_id = ?',
+                [qrData, student.student_id]
+            );
+        }
+        
+        console.log('✅ All students updated with QR codes');
+        
+        res.json({
+            success: true,
+            message: 'Schema fixed successfully - QR code column added',
+            students_updated: students.length,
+            timestamp: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('❌ Schema fix failed:', error);
+        
+        res.status(500).json({
+            success: false,
+            message: 'Schema fix failed',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 module.exports = router;
